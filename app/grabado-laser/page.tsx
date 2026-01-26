@@ -2,14 +2,17 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { ArrowRight } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { ArrowRight, Edit3, Upload, X } from "lucide-react"
 import useSWR from "swr"
 
 interface LaserProduct {
   id: string
   name: string
   price: number
+  description: string
   image?: string
+  mediaType?: "image" | "video"
 }
 
 interface Material {
@@ -31,14 +34,14 @@ const defaultContent: LaserContent = {
     { name: "Metal", description: "Grabado en varios metales para productos duraderos" },
   ],
   products: [
-    { id: "laser-1", name: "Diseño grafico", price: 75 },
-    { id: "laser-2", name: "Diseño grafico", price: 75 },
-    { id: "laser-3", name: "Diseños grafico", price: 75 },
-    { id: "laser-4", name: "Diseño grafico", price: 75 },
-    { id: "laser-5", name: "Diseño grafico", price: 75 },
-    { id: "laser-6", name: "Diseño grafico", price: 75 },
-    { id: "laser-7", name: "Diseño grafico", price: 75 },
-    { id: "laser-8", name: "Diseño grafico", price: 75 },
+    { id: "laser-1", name: "Diseño grafico", price: 75, description: "Grabado personalizado en madera." },
+    { id: "laser-2", name: "Diseño grafico", price: 75, description: "Grabado en acrilico con acabado limpio." },
+    { id: "laser-3", name: "Diseños grafico", price: 75, description: "Detalles precisos para regalos." },
+    { id: "laser-4", name: "Diseño grafico", price: 75, description: "Grabado para piezas corporativas." },
+    { id: "laser-5", name: "Diseño grafico", price: 75, description: "Personalizacion con texto y logo." },
+    { id: "laser-6", name: "Diseño grafico", price: 75, description: "Ideal para eventos y souvenirs." },
+    { id: "laser-7", name: "Diseño grafico", price: 75, description: "Acabado premium en metal." },
+    { id: "laser-8", name: "Diseño grafico", price: 75, description: "Grabado fino en cuero." },
   ],
 }
 
@@ -53,7 +56,87 @@ const fetcher = (url: string) => fetch(url).then(res => res.json())
 
 export default function GrabadoLaserPage() {
   const { data } = useSWR<LaserContent>("/api/content/laser", fetcher)
-  const content = data || defaultContent
+  const [content, setContent] = useState<LaserContent>(defaultContent)
+  const [editingProduct, setEditingProduct] = useState<LaserProduct | null>(null)
+  const [draft, setDraft] = useState<Partial<LaserProduct>>({})
+  const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  useEffect(() => {
+    if (data) {
+      setContent(data)
+    }
+  }, [data])
+
+  const handleOpenEdit = (product: LaserProduct) => {
+    setEditingProduct(product)
+    setDraft({
+      description: product.description || "",
+      price: product.price,
+      image: product.image,
+      mediaType: product.mediaType,
+    })
+  }
+
+  const handleMediaUpload = async (file: File) => {
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("folder", "laser/products")
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (response.ok) {
+        const { url } = await response.json()
+        setDraft((prev) => ({
+          ...prev,
+          image: url,
+          mediaType: file.type.startsWith("video/") ? "video" : "image",
+        }))
+      }
+    } catch (error) {
+      console.error("Upload failed:", error)
+    }
+    setUploading(false)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editingProduct) return
+    setSaving(true)
+    const updatedContent: LaserContent = {
+      ...content,
+      products: content.products.map((product) =>
+        product.id === editingProduct.id
+          ? {
+              ...product,
+              description: String(draft.description || ""),
+              price: Number(draft.price || 0),
+              image: draft.image,
+              mediaType: draft.mediaType,
+            }
+          : product
+      ),
+    }
+
+    try {
+      await fetch("/api/content/laser", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedContent),
+      })
+      setContent(updatedContent)
+      setEditingProduct(null)
+    } catch (error) {
+      console.error("Save failed:", error)
+      alert("Error al guardar los cambios")
+    }
+    setSaving(false)
+  }
 
   return (
     <div className="bg-cream min-h-screen">
@@ -118,21 +201,46 @@ export default function GrabadoLaserPage() {
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {content.products.map((product) => (
-              <div key={product.id} className="group">
+              <div key={product.id} className="group relative">
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    handleOpenEdit(product)
+                  }}
+                  className="absolute right-2 top-2 z-10 rounded-full bg-white/90 p-2 text-[#1a1a1a] shadow hover:bg-white"
+                  aria-label="Editar producto"
+                >
+                  <Edit3 className="h-4 w-4" />
+                </button>
                 <div className="aspect-square bg-gray-200 rounded-lg mb-3 overflow-hidden relative">
                   {product.image ? (
-                    <Image
-                      src={product.image || "/placeholder.svg"}
-                      alt={product.name}
-                      fill
-                      className="object-cover"
-                    />
+                    product.mediaType === "video" ? (
+                      <video
+                        src={product.image}
+                        className="h-full w-full object-cover"
+                        controls
+                        playsInline
+                        preload="metadata"
+                      />
+                    ) : (
+                      <Image
+                        src={product.image || "/placeholder.svg"}
+                        alt={product.name}
+                        fill
+                        className="object-cover"
+                      />
+                    )
                   ) : (
                     <div className="w-full h-full bg-gray-300" />
                   )}
                 </div>
                 <h3 className="font-medium text-[#1a1a1a] mb-1">{product.name}</h3>
-                <p className="text-muted-foreground text-sm mb-3">Desde</p>
+                {product.description ? (
+                  <p className="text-muted-foreground text-sm mb-2">{product.description}</p>
+                ) : null}
+                <p className="text-muted-foreground text-sm mb-3">Desde {product.price} €</p>
                 {/* Changed from addItem to Link to Contact */}
                 <Link
                   href="/contacto"
@@ -183,6 +291,104 @@ export default function GrabadoLaserPage() {
           </Link>
         </div>
       </section>
+
+      {editingProduct ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-[#1a1a1a]">Editar producto</h3>
+              <button
+                type="button"
+                onClick={() => setEditingProduct(null)}
+                className="rounded-full p-1 text-muted-foreground hover:text-[#1a1a1a]"
+                aria-label="Cerrar"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="rounded-xl border border-border p-3">
+                <div className="mb-3 aspect-square overflow-hidden rounded-lg bg-gray-100 relative">
+                  {draft.image ? (
+                    draft.mediaType === "video" ? (
+                      <video
+                        src={draft.image}
+                        className="h-full w-full object-cover"
+                        controls
+                        playsInline
+                        preload="metadata"
+                      />
+                    ) : (
+                      <Image
+                        src={draft.image}
+                        alt={editingProduct.name}
+                        fill
+                        className="object-cover"
+                      />
+                    )
+                  ) : (
+                    <div className="h-full w-full bg-gray-200" />
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex items-center gap-2 rounded-full bg-[#1a1a1a] px-4 py-2 text-sm font-medium text-white hover:bg-[#2a2a2a] transition-colors"
+                  disabled={uploading}
+                >
+                  <Upload className="h-4 w-4" />
+                  {uploading ? "Subiendo..." : "Subir foto o video"}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,video/*"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0]
+                    if (file) handleMediaUpload(file)
+                  }}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm text-muted-foreground">Descripción</label>
+                <textarea
+                  value={String(draft.description || "")}
+                  onChange={(event) => setDraft((prev) => ({ ...prev, description: event.target.value }))}
+                  rows={3}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold resize-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm text-muted-foreground">Precio (€)</label>
+                <input
+                  type="number"
+                  value={draft.price ?? 0}
+                  onChange={(event) => setDraft((prev) => ({ ...prev, price: Number(event.target.value) }))}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold"
+                />
+              </div>
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingProduct(null)}
+                  className="rounded-full border border-border px-4 py-2 text-sm font-medium text-[#1a1a1a] hover:bg-cream-dark transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveEdit}
+                  disabled={saving}
+                  className="rounded-full bg-gold px-4 py-2 text-sm font-medium text-[#1a1a1a] hover:bg-gold-light transition-colors disabled:opacity-60"
+                >
+                  {saving ? "Guardando..." : "Guardar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

@@ -10,7 +10,9 @@ interface LaserProduct {
   id: string
   name: string
   price: number
+  description: string
   image?: string
+  mediaType?: "image" | "video"
 }
 
 interface Material {
@@ -80,7 +82,9 @@ export default function AdminLaserPage() {
         setContent({
           ...content,
           products: content.products.map((p) =>
-            p.id === productId ? { ...p, image: url } : p
+            p.id === productId
+              ? { ...p, image: url, mediaType: file.type.startsWith("video/") ? "video" : "image" }
+              : p
           ),
         })
       }
@@ -113,7 +117,10 @@ export default function AdminLaserPage() {
     const newId = `laser-${Date.now()}`
     setContent({
       ...content,
-      products: [...content.products, { id: newId, name: "Nuevo producto", price: 75 }],
+      products: [
+        ...content.products,
+        { id: newId, name: "Nuevo producto", price: 75, description: "Describe el producto aqui." },
+      ],
     })
   }
 
@@ -248,18 +255,28 @@ export default function AdminLaserPage() {
               <div className="aspect-square bg-gray-200 rounded-lg overflow-hidden relative mb-3">
                 {product.image ? (
                   <>
-                    <Image
-                      src={product.image || "/placeholder.svg"}
-                      alt={product.name}
-                      fill
-                      className="object-cover"
-                    />
+                    {product.mediaType === "video" ? (
+                      <video
+                        src={product.image}
+                        className="h-full w-full object-cover"
+                        controls
+                        playsInline
+                        preload="metadata"
+                      />
+                    ) : (
+                      <Image
+                        src={product.image || "/placeholder.svg"}
+                        alt={product.name}
+                        fill
+                        className="object-cover"
+                      />
+                    )}
                     <button
                       onClick={() => {
                         setContent({
                           ...content,
                           products: content.products.map((p) =>
-                            p.id === product.id ? { ...p, image: undefined } : p
+                            p.id === product.id ? { ...p, image: undefined, mediaType: undefined } : p
                           ),
                         })
                       }}
@@ -279,7 +296,7 @@ export default function AdminLaserPage() {
                     ) : (
                       <>
                         <Upload className="w-6 h-6 mb-1" />
-                        <span className="text-xs">Subir imagen</span>
+                        <span className="text-xs">Subir media</span>
                       </>
                     )}
                   </button>
@@ -287,7 +304,7 @@ export default function AdminLaserPage() {
               </div>
               <input
                 type="file"
-                accept="image/*"
+                accept="image/*,video/*"
                 className="hidden"
                 ref={(el) => { fileInputRefs.current[product.id] = el }}
                 onChange={(e) => {
@@ -308,10 +325,23 @@ export default function AdminLaserPage() {
                 }}
                 className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold mb-2"
               />
+              <textarea
+                value={product.description || ""}
+                onChange={(e) => {
+                  setContent({
+                    ...content,
+                    products: content.products.map((p) =>
+                      p.id === product.id ? { ...p, description: e.target.value } : p
+                    ),
+                  })
+                }}
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold resize-none mb-2"
+                rows={2}
+              />
               <div className="flex items-center gap-2">
                 <input
                   type="number"
-                  value={product.price}
+                  value={product.price ?? 0}
                   onChange={(e) => {
                     setContent({
                       ...content,

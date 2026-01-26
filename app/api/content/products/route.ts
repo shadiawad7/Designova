@@ -10,21 +10,22 @@ interface Product {
   category: string
   image?: string
   description?: string
+  mediaType?: "image" | "video"
 }
 
 const defaultProducts: Product[] = [
-  { id: "1", name: "Diseño grafico", price: 50, category: "Diseño" },
-  { id: "2", name: "Diseño grafico", price: 50, category: "Diseño" },
-  { id: "3", name: "Diseño grafico", price: 50, category: "Diseño" },
-  { id: "4", name: "Diseño grafico", price: 50, category: "Diseño" },
-  { id: "5", name: "Diseño grafico", price: 50, category: "Diseño" },
-  { id: "6", name: "Diseño grafico", price: 50, category: "Diseño" },
-  { id: "7", name: "Diseño grafico", price: 50, category: "Diseño" },
-  { id: "8", name: "Diseño grafico", price: 50, category: "Diseño" },
-  { id: "9", name: "Diseño grafico", price: 50, category: "Diseño" },
-  { id: "10", name: "Diseño grafico", price: 50, category: "Diseño" },
-  { id: "11", name: "Diseño grafico", price: 50, category: "Diseño" },
-  { id: "12", name: "Diseño grafico", price: 50, category: "Diseño" },
+  { id: "1", name: "Diseño grafico", price: 50, category: "Diseño", description: "Diseño personalizado para redes." },
+  { id: "2", name: "Diseño grafico", price: 50, category: "Diseño", description: "Propuesta creativa para tu marca." },
+  { id: "3", name: "Diseño grafico", price: 50, category: "Diseño", description: "Diseño a medida para impresos." },
+  { id: "4", name: "Diseño grafico", price: 50, category: "Diseño", description: "Composición visual para eventos." },
+  { id: "5", name: "Diseño grafico", price: 50, category: "Diseño", description: "Piezas gráficas para promociones." },
+  { id: "6", name: "Diseño grafico", price: 50, category: "Diseño", description: "Diseños exclusivos y adaptados." },
+  { id: "7", name: "Diseño grafico", price: 50, category: "Diseño", description: "Material gráfico para campañas." },
+  { id: "8", name: "Diseño grafico", price: 50, category: "Diseño", description: "Diseño profesional para negocios." },
+  { id: "9", name: "Diseño grafico", price: 50, category: "Diseño", description: "Arte final para impresión." },
+  { id: "10", name: "Diseño grafico", price: 50, category: "Diseño", description: "Diseño editorial y publicitario." },
+  { id: "11", name: "Diseño grafico", price: 50, category: "Diseño", description: "Piezas gráficas con identidad." },
+  { id: "12", name: "Diseño grafico", price: 50, category: "Diseño", description: "Soluciones gráficas creativas." },
 ]
 
 export async function GET() {

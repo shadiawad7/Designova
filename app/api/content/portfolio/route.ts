@@ -7,13 +7,18 @@ interface Project {
   id: number
   title: string
   category: string
+  description: string
+  price: number
   image?: string
+  mediaType?: "image" | "video"
 }
 
 const defaultProjects: Project[] = Array(16).fill(null).map((_, i) => ({
   id: i + 1,
   title: "Diseño grafico",
   category: ["Invitaciones", "Grabado", "Diseño gráfico"][i % 3],
+  description: "Proyecto personalizado con detalles a medida.",
+  price: 50 + (i % 4) * 25,
 }))
 
 export async function GET() {

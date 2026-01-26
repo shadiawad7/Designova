@@ -6,36 +6,34 @@ import Image from "next/image"
 import useSWR, { mutate } from "swr"
 import { ArrowLeft, Plus, Trash2, Upload, Save, X } from "lucide-react"
 
-interface Product {
+interface GraphicService {
   id: string
-  name: string
+  title: string
+  description: string
   price: number
-  category: string
   image?: string
-  description?: string
   mediaType?: "image" | "video"
 }
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
-export default function AdminProductsPage() {
-  const { data, isLoading } = useSWR<{ products: Product[] }>("/api/content/products", fetcher)
-  const [products, setProducts] = useState<Product[]>([])
+export default function AdminGraphicDesignPage() {
+  const { data, isLoading } = useSWR<{ services: GraphicService[] }>("/api/content/graphic-design", fetcher)
+  const [services, setServices] = useState<GraphicService[]>([])
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState<string | null>(null)
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({})
 
-  // Sync state when data loads
-  if (data?.products && products.length === 0) {
-    setProducts(data.products)
+  if (data?.services && services.length === 0) {
+    setServices(data.services)
   }
 
-  const handleImageUpload = async (productId: string, file: File) => {
-    setUploading(productId)
+  const handleMediaUpload = async (serviceId: string, file: File) => {
+    setUploading(serviceId)
     try {
       const formData = new FormData()
       formData.append("file", file)
-      formData.append("folder", "products")
+      formData.append("folder", "graphic-design/services")
 
       const response = await fetch("/api/upload", {
         method: "POST",
@@ -44,11 +42,11 @@ export default function AdminProductsPage() {
 
       if (response.ok) {
         const { url } = await response.json()
-        setProducts((prev) =>
-          prev.map((p) =>
-            p.id === productId
-              ? { ...p, image: url, mediaType: file.type.startsWith("video/") ? "video" : "image" }
-              : p
+        setServices((prev) =>
+          prev.map((service) =>
+            service.id === serviceId
+              ? { ...service, image: url, mediaType: file.type.startsWith("video/") ? "video" : "image" }
+              : service
           )
         )
       }
@@ -58,7 +56,7 @@ export default function AdminProductsPage() {
     setUploading(null)
   }
 
-  const handleRemoveImage = async (productId: string, imageUrl?: string) => {
+  const handleRemoveMedia = async (serviceId: string, imageUrl?: string) => {
     if (imageUrl) {
       try {
         await fetch("/api/delete", {
@@ -69,46 +67,45 @@ export default function AdminProductsPage() {
         console.error("Delete failed:", error)
       }
     }
-    setProducts((prev) =>
-      prev.map((p) =>
-        p.id === productId ? { ...p, image: undefined, mediaType: undefined } : p
+    setServices((prev) =>
+      prev.map((service) =>
+        service.id === serviceId ? { ...service, image: undefined, mediaType: undefined } : service
       )
     )
   }
 
-  const handleUpdateProduct = (productId: string, field: keyof Product, value: string | number) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === productId ? { ...p, [field]: value } : p))
+  const handleUpdateService = (serviceId: string, field: keyof GraphicService, value: string | number) => {
+    setServices((prev) =>
+      prev.map((service) => (service.id === serviceId ? { ...service, [field]: value } : service))
     )
   }
 
-  const handleAddProduct = () => {
-    const newId = `${Date.now()}`
-    setProducts((prev) => [
+  const handleAddService = () => {
+    const newId = `service-${Date.now()}`
+    setServices((prev) => [
       ...prev,
       {
         id: newId,
-        name: "Nuevo producto",
+        title: "Nuevo servicio",
+        description: "Describe el servicio aqui.",
         price: 50,
-        category: "Diseño",
-        description: "Describe el producto aqui.",
       },
     ])
   }
 
-  const handleDeleteProduct = (productId: string) => {
-    setProducts((prev) => prev.filter((p) => p.id !== productId))
+  const handleDeleteService = (serviceId: string) => {
+    setServices((prev) => prev.filter((service) => service.id !== serviceId))
   }
 
   const handleSave = async () => {
     setSaving(true)
     try {
-      await fetch("/api/content/products", {
+      await fetch("/api/content/graphic-design", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ products }),
+        body: JSON.stringify({ services }),
       })
-      mutate("/api/content/products")
+      mutate("/api/content/graphic-design")
       alert("Cambios guardados correctamente")
     } catch (error) {
       console.error("Save failed:", error)
@@ -137,14 +134,14 @@ export default function AdminProductsPage() {
               <ArrowLeft className="w-5 h-5" />
               Volver
             </Link>
-            <h1 className="text-3xl font-bold text-[#1a1a1a]">Productos de Tienda</h1>
+            <h1 className="text-3xl font-bold text-[#1a1a1a]">Diseño gráfico</h1>
           </div>
           <div className="flex gap-3">
             <button
-              onClick={handleAddProduct}
+              onClick={handleAddService}
               className="flex items-center gap-2 bg-[#1a1a1a] hover:bg-[#2a2a2a] text-white px-4 py-2 rounded-full text-sm font-medium transition-colors"
             >
-              <Plus className="w-4 h-4" /> Añadir producto
+              <Plus className="w-4 h-4" /> Añadir servicio
             </button>
             <button
               onClick={handleSave}
@@ -157,19 +154,18 @@ export default function AdminProductsPage() {
         </div>
 
         <div className="grid gap-4">
-          {products.map((product) => (
+          {services.map((service) => (
             <div
-              key={product.id}
+              key={service.id}
               className="bg-white rounded-xl p-4 flex flex-col md:flex-row gap-4 items-start"
             >
-              {/* Image Section */}
-              <div className="w-full md:w-32 flex-shrink-0">
+              <div className="w-full md:w-36 flex-shrink-0">
                 <div className="aspect-square bg-gray-200 rounded-lg overflow-hidden relative">
-                  {product.image ? (
+                  {service.image ? (
                     <>
-                      {product.mediaType === "video" ? (
+                      {service.mediaType === "video" ? (
                         <video
-                          src={product.image}
+                          src={service.image}
                           className="h-full w-full object-cover"
                           controls
                           playsInline
@@ -177,14 +173,14 @@ export default function AdminProductsPage() {
                         />
                       ) : (
                         <Image
-                          src={product.image || "/placeholder.svg"}
-                          alt={product.name}
+                          src={service.image || "/placeholder.svg"}
+                          alt={service.title}
                           fill
                           className="object-cover"
                         />
                       )}
                       <button
-                        onClick={() => handleRemoveImage(product.id, product.image)}
+                        onClick={() => handleRemoveMedia(service.id, service.image)}
                         className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
                       >
                         <X className="w-3 h-3" />
@@ -192,11 +188,11 @@ export default function AdminProductsPage() {
                     </>
                   ) : (
                     <button
-                      onClick={() => fileInputRefs.current[product.id]?.click()}
+                      onClick={() => fileInputRefs.current[service.id]?.click()}
                       className="w-full h-full flex flex-col items-center justify-center text-muted-foreground hover:text-[#1a1a1a] transition-colors"
-                      disabled={uploading === product.id}
+                      disabled={uploading === service.id}
                     >
-                      {uploading === product.id ? (
+                      {uploading === service.id ? (
                         <span className="text-xs">Subiendo...</span>
                       ) : (
                         <>
@@ -211,22 +207,21 @@ export default function AdminProductsPage() {
                   type="file"
                   accept="image/*,video/*"
                   className="hidden"
-                  ref={(el) => { fileInputRefs.current[product.id] = el }}
+                  ref={(el) => { fileInputRefs.current[service.id] = el }}
                   onChange={(e) => {
                     const file = e.target.files?.[0]
-                    if (file) handleImageUpload(product.id, file)
+                    if (file) handleMediaUpload(service.id, file)
                   }}
                 />
               </div>
 
-              {/* Fields Section */}
               <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-                <div>
-                  <label className="text-sm text-muted-foreground mb-1 block">Nombre</label>
+                <div className="md:col-span-2">
+                  <label className="text-sm text-muted-foreground mb-1 block">Título</label>
                   <input
                     type="text"
-                    value={product.name}
-                    onChange={(e) => handleUpdateProduct(product.id, "name", e.target.value)}
+                    value={service.title || ""}
+                    onChange={(e) => handleUpdateService(service.id, "title", e.target.value)}
                     className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold"
                   />
                 </div>
@@ -234,34 +229,24 @@ export default function AdminProductsPage() {
                   <label className="text-sm text-muted-foreground mb-1 block">Precio (€)</label>
                   <input
                     type="number"
-                    value={product.price ?? 0}
-                    onChange={(e) => handleUpdateProduct(product.id, "price", Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground mb-1 block">Categoría</label>
-                  <input
-                    type="text"
-                    value={product.category}
-                    onChange={(e) => handleUpdateProduct(product.id, "category", e.target.value)}
+                    value={service.price ?? 0}
+                    onChange={(e) => handleUpdateService(service.id, "price", Number(e.target.value))}
                     className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold"
                   />
                 </div>
                 <div className="md:col-span-3">
                   <label className="text-sm text-muted-foreground mb-1 block">Descripción</label>
                   <textarea
-                    value={product.description || ""}
-                    onChange={(e) => handleUpdateProduct(product.id, "description", e.target.value)}
+                    value={service.description || ""}
+                    onChange={(e) => handleUpdateService(service.id, "description", e.target.value)}
                     className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-gold resize-none"
                     rows={2}
                   />
                 </div>
               </div>
 
-              {/* Delete Button */}
               <button
-                onClick={() => handleDeleteProduct(product.id)}
+                onClick={() => handleDeleteService(service.id)}
                 className="text-red-500 hover:text-red-600 p-2"
               >
                 <Trash2 className="w-5 h-5" />

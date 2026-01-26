@@ -13,6 +13,13 @@ const sections = [
     href: "/admin/productos",
   },
   {
+    id: "graphic-design",
+    title: "Diseño gráfico",
+    description: "Gestiona los servicios de diseño",
+    icon: Briefcase,
+    href: "/admin/diseno-grafico",
+  },
+  {
     id: "portfolio",
     title: "Portafolio",
     description: "Gestiona los proyectos del portafolio",

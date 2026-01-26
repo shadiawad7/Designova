@@ -10,7 +10,10 @@ interface Project {
   id: number
   title: string
   category: string
+  description: string
+  price: number
   image?: string
+  mediaType?: "image" | "video"
 }
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
@@ -41,7 +44,11 @@ export default function AdminPortfolioPage() {
       if (response.ok) {
         const { url } = await response.json()
         setProjects((prev) =>
-          prev.map((p) => (p.id === projectId ? { ...p, image: url } : p))
+          prev.map((p) =>
+            p.id === projectId
+              ? { ...p, image: url, mediaType: file.type.startsWith("video/") ? "video" : "image" }
+              : p
+          )
         )
       }
     } catch (error) {
@@ -62,11 +69,13 @@ export default function AdminPortfolioPage() {
       }
     }
     setProjects((prev) =>
-      prev.map((p) => (p.id === projectId ? { ...p, image: undefined } : p))
+      prev.map((p) =>
+        p.id === projectId ? { ...p, image: undefined, mediaType: undefined } : p
+      )
     )
   }
 
-  const handleUpdateProject = (projectId: number, field: keyof Project, value: string) => {
+  const handleUpdateProject = (projectId: number, field: keyof Project, value: string | number) => {
     setProjects((prev) =>
       prev.map((p) => (p.id === projectId ? { ...p, [field]: value } : p))
     )
@@ -76,7 +85,13 @@ export default function AdminPortfolioPage() {
     const newId = Date.now()
     setProjects((prev) => [
       ...prev,
-      { id: newId, title: "Nuevo proyecto", category: "Diseño gráfico" },
+      {
+        id: newId,
+        title: "Nuevo proyecto",
+        category: "Diseño gráfico",
+        description: "Describe el proyecto aqui.",
+        price: 50,
+      },
     ])
   }
 
@@ -147,12 +162,22 @@ export default function AdminPortfolioPage() {
               <div className="aspect-square bg-gray-200 rounded-lg overflow-hidden relative mb-3">
                 {project.image ? (
                   <>
-                    <Image
-                      src={project.image || "/placeholder.svg"}
-                      alt={project.title}
-                      fill
-                      className="object-cover"
-                    />
+                    {project.mediaType === "video" ? (
+                      <video
+                        src={project.image}
+                        className="h-full w-full object-cover"
+                        controls
+                        playsInline
+                        preload="metadata"
+                      />
+                    ) : (
+                      <Image
+                        src={project.image || "/placeholder.svg"}
+                        alt={project.title}
+                        fill
+                        className="object-cover"
+                      />
+                    )}
                     <button
                       onClick={() => handleRemoveImage(project.id, project.image)}
                       className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
@@ -171,7 +196,7 @@ export default function AdminPortfolioPage() {
                     ) : (
                       <>
                         <Upload className="w-6 h-6 mb-1" />
-                        <span className="text-xs">Subir imagen</span>
+                        <span className="text-xs">Subir media</span>
                       </>
                     )}
                   </button>
@@ -179,7 +204,7 @@ export default function AdminPortfolioPage() {
               </div>
               <input
                 type="file"
-                accept="image/*"
+                accept="image/*,video/*"
                 className="hidden"
                 ref={(el) => { fileInputRefs.current[project.id] = el }}
                 onChange={(e) => {
@@ -196,6 +221,13 @@ export default function AdminPortfolioPage() {
                 className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold mb-2"
                 placeholder="Título"
               />
+              <textarea
+                value={project.description || ""}
+                onChange={(e) => handleUpdateProject(project.id, "description", e.target.value)}
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold mb-2 resize-none"
+                rows={2}
+                placeholder="Descripción"
+              />
               <div className="flex items-center gap-2">
                 <select
                   value={project.category}
@@ -206,6 +238,15 @@ export default function AdminPortfolioPage() {
                   <option value="Grabado">Grabado</option>
                   <option value="Diseño gráfico">Diseño gráfico</option>
                 </select>
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <input
+                  type="number"
+                  value={project.price ?? 0}
+                  onChange={(e) => handleUpdateProject(project.id, "price", Number(e.target.value))}
+                  className="flex-1 px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold"
+                  placeholder="Precio"
+                />
                 <button
                   onClick={() => handleDeleteProject(project.id)}
                   className="text-red-500 hover:text-red-600 p-2"

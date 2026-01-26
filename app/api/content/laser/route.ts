@@ -7,7 +7,9 @@ interface LaserProduct {
   id: string
   name: string
   price: number
+  description: string
   image?: string
+  mediaType?: "image" | "video"
 }
 
 interface Material {
@@ -29,14 +31,14 @@ const defaultContent: LaserContent = {
     { name: "Metal", description: "Grabado en varios metales para productos duraderos" },
   ],
   products: [
-    { id: "laser-1", name: "Diseño grafico", price: 75 },
-    { id: "laser-2", name: "Diseño grafico", price: 75 },
-    { id: "laser-3", name: "Diseños grafico", price: 75 },
-    { id: "laser-4", name: "Diseño grafico", price: 75 },
-    { id: "laser-5", name: "Diseño grafico", price: 75 },
-    { id: "laser-6", name: "Diseño grafico", price: 75 },
-    { id: "laser-7", name: "Diseño grafico", price: 75 },
-    { id: "laser-8", name: "Diseño grafico", price: 75 },
+    { id: "laser-1", name: "Diseño grafico", price: 75, description: "Grabado personalizado en madera." },
+    { id: "laser-2", name: "Diseño grafico", price: 75, description: "Grabado en acrilico con acabado limpio." },
+    { id: "laser-3", name: "Diseños grafico", price: 75, description: "Detalles precisos para regalos." },
+    { id: "laser-4", name: "Diseño grafico", price: 75, description: "Grabado para piezas corporativas." },
+    { id: "laser-5", name: "Diseño grafico", price: 75, description: "Personalizacion con texto y logo." },
+    { id: "laser-6", name: "Diseño grafico", price: 75, description: "Ideal para eventos y souvenirs." },
+    { id: "laser-7", name: "Diseño grafico", price: 75, description: "Acabado premium en metal." },
+    { id: "laser-8", name: "Diseño grafico", price: 75, description: "Grabado fino en cuero." },
   ],
 }
 
