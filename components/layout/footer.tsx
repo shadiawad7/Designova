@@ -1,4 +1,8 @@
+"use client"
+
 import Link from "next/link"
+import Image from "next/image"
+import useSWR from "swr"
 
 const quickLinks = [
   { href: "/tienda", label: "Tienda" },
@@ -17,6 +21,12 @@ const infoLinks = [
 ]
 
 export function Footer() {
+  const { data } = useSWR<{ items: { id: string; foto: string | null }[] }>(
+    "/api/logo",
+    (url) => fetch(url).then((res) => res.json())
+  )
+  const logoUrl = data?.items?.[0]?.foto || undefined
+
   return (
     <footer className="bg-[#1a1a1a] text-white py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -24,10 +34,23 @@ export function Footer() {
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-gold rounded flex items-center justify-center">
-                <span className="text-[#1a1a1a] font-bold text-xs">D</span>
-              </div>
-              <span className="text-gold font-semibold tracking-wide">DESIGNOVA</span>
+              {logoUrl ? (
+                <div className="relative h-10 w-32">
+                  <Image
+                    src={logoUrl}
+                    alt="Designova"
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+              ) : (
+                <>
+                  <div className="w-8 h-8 bg-gold rounded flex items-center justify-center">
+                    <span className="text-[#1a1a1a] font-bold text-xs">D</span>
+                  </div>
+                  <span className="text-gold font-semibold tracking-wide">DESIGNOVA</span>
+                </>
+              )}
             </div>
             <p className="text-white/70 text-sm mb-1">Diseñamos Momentos</p>
             <p className="text-white/70 text-sm">Creamos Recuerdos</p>

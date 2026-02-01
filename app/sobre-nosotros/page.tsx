@@ -269,7 +269,7 @@ export default function SobreNosotrosPage() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-2 rounded-full bg-[#1a1a1a] px-4 py-2 text-sm font-medium text-white hover:bg-[#2a2a2a] transition-colors"
+                  className="inline-flex items-center gap-2 rounded-full bg-[#1a1a1a] px-4 py-2 text-sm font-medium text-white hover:bg-gold-light hover:text-[#1a1a1a] transition-colors"
                   disabled={uploading}
                 >
                   <Upload className="h-4 w-4" />

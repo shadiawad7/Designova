@@ -47,7 +47,6 @@ const isVideoUrl = (url?: string) => {
 }
 
 export default function GrabadoLaserPage() {
-  const { data } = useSWR<LaserContent>("/api/content/laser", fetcher)
   const { data: materialsData } = useSWR<{ items: { id: string; foto: string | null; nombre: string | null; descripcion: string | null }[] }>(
     "/api/materiales-grabado",
     fetcher
@@ -71,12 +70,6 @@ export default function GrabadoLaserPage() {
   const [uploadingMaterial, setUploadingMaterial] = useState(false)
   const [deletingMaterialId, setDeletingMaterialId] = useState<string | null>(null)
   const materialFileInputRef = useRef<HTMLInputElement | null>(null)
-
-  useEffect(() => {
-    if (data) {
-      setContent(data)
-    }
-  }, [data])
 
   useEffect(() => {
     if (materialsData?.items) {
@@ -405,8 +398,7 @@ export default function GrabadoLaserPage() {
       </section>
 
       {/* Materials Section */}
-      {materialsEmpty ? null : (
-        <section className="py-16 px-4 bg-white">
+      <section className="py-16 px-4 bg-white">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-4 text-[#1a1a1a]">
             Materiales para grabado
@@ -435,7 +427,10 @@ export default function GrabadoLaserPage() {
           {materialsEmpty ? null : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {content.materials.map((material, index) => (
-                <div key={material.id || `${material.name}-${index}`} className="text-center relative">
+                <div
+                  key={material.id || `${material.name}-${index}`}
+                  className="text-center relative flex flex-col items-center"
+                >
                 <button
                   type="button"
                   onClick={(event) => {
@@ -461,7 +456,7 @@ export default function GrabadoLaserPage() {
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
-                <div className="aspect-square bg-gray-200 rounded-lg mb-4 overflow-hidden relative">
+                <div className="aspect-square w-full bg-gray-200 rounded-lg mb-4 overflow-hidden relative">
                   {material.image ? (
                     <Image
                       src={material.image || "/placeholder.svg"}
@@ -481,11 +476,9 @@ export default function GrabadoLaserPage() {
           )}
         </div>
       </section>
-      )}
 
       {/* Products Section - Now redirects to Contact */}
-      {itemsEmpty ? null : (
-        <section className="py-16 px-4 bg-cream-dark">
+      <section className="py-16 px-4 bg-cream-dark">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-4 text-[#1a1a1a] underline decoration-gold underline-offset-8">
             Productos populares
@@ -515,7 +508,7 @@ export default function GrabadoLaserPage() {
           {itemsEmpty ? null : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {content.products.map((product) => (
-                <div key={product.id} className="group relative">
+                <div key={product.id} className="group relative text-center flex flex-col items-center">
                 <button
                   type="button"
                   onClick={(event) => {
@@ -541,7 +534,7 @@ export default function GrabadoLaserPage() {
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
-                <div className="aspect-square bg-gray-200 rounded-lg mb-3 overflow-hidden relative">
+                <div className="aspect-square w-full bg-gray-200 rounded-lg mb-3 overflow-hidden relative">
                   {product.image ? (
                     isVideoUrl(product.image) ? (
                       <video
@@ -581,7 +574,6 @@ export default function GrabadoLaserPage() {
           )}
         </div>
       </section>
-      )}
 
       {/* Process Section */}
       <section className="py-16 px-4 bg-white">
@@ -604,12 +596,12 @@ export default function GrabadoLaserPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 px-4 bg-[#1a1a1a]">
+      <section className="py-16 px-4 bg-cream-dark">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-[#1a1a1a]">
             ¿Tienes idea para un producto especial?
           </h2>
-          <p className="text-white/70 mb-8">
+          <p className="text-muted-foreground mb-8">
             Nos encantaría escuchar y ayudar a hacer realidad tu idea
           </p>
           <Link
@@ -667,7 +659,7 @@ export default function GrabadoLaserPage() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-2 rounded-full bg-[#1a1a1a] px-4 py-2 text-sm font-medium text-white hover:bg-[#2a2a2a] transition-colors"
+                  className="inline-flex items-center gap-2 rounded-full bg-[#1a1a1a] px-4 py-2 text-sm font-medium text-white hover:bg-gold-light hover:text-[#1a1a1a] transition-colors"
                   disabled={uploading}
                 >
                   <Upload className="h-4 w-4" />
@@ -772,7 +764,7 @@ export default function GrabadoLaserPage() {
                 <button
                   type="button"
                   onClick={() => materialFileInputRef.current?.click()}
-                  className="inline-flex items-center gap-2 rounded-full bg-[#1a1a1a] px-4 py-2 text-sm font-medium text-white hover:bg-[#2a2a2a] transition-colors"
+                  className="inline-flex items-center gap-2 rounded-full bg-[#1a1a1a] px-4 py-2 text-sm font-medium text-white hover:bg-gold-light hover:text-[#1a1a1a] transition-colors"
                   disabled={uploadingMaterial}
                 >
                   <Upload className="h-4 w-4" />

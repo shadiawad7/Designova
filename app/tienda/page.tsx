@@ -235,7 +235,7 @@ export default function TiendaPage() {
       </section>
 
       {/* Products Grid */}
-      <section className="py-8 px-4">
+      <section className="py-40 px-4 pb-0">
         <div className="max-w-6xl mx-auto">
           {itemsEmpty ? (
             <div className="rounded-2xl border border-dashed border-border bg-white p-10 text-center text-muted-foreground">
@@ -319,17 +319,17 @@ export default function TiendaPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 px-4 bg-[#1a1a1a] mt-16">
+      <section className="py-16 px-4 bg-cream-dark mt-0">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-2xl md:text-3xl font-bold mb-4 text-white">
+          <h2 className="text-2xl md:text-3xl font-bold mb-4 text-[#1a1a1a]">
             ¿No encontraste lo que buscabas ?
           </h2>
-          <p className="text-white/70 mb-8 max-w-2xl mx-auto">
+          <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
             Nos especializamos en diseño personalizado. Cuéntanos qué buscas y crearemos el producto perfecto para ti.
           </p>
           <Link
             href="/contacto"
-            className="inline-flex items-center gap-2 border border-gold text-gold hover:bg-gold hover:text-[#1a1a1a] px-6 py-3 rounded-full font-medium transition-colors"
+            className="inline-flex items-center gap-2 bg-gold hover:bg-gold-light text-[#1a1a1a] px-6 py-3 rounded-full font-medium transition-colors"
           >
             Contactar para diseño personalizado <ArrowRight className="w-4 h-4" />
           </Link>
@@ -382,7 +382,7 @@ export default function TiendaPage() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-2 rounded-full bg-[#1a1a1a] px-4 py-2 text-sm font-medium text-white hover:bg-[#2a2a2a] transition-colors"
+                  className="inline-flex items-center gap-2 rounded-full bg-[#1a1a1a] px-4 py-2 text-sm font-medium text-white hover:bg-gold-light hover:text-[#1a1a1a] transition-colors"
                   disabled={uploading}
                 >
                   <Upload className="h-4 w-4" />
