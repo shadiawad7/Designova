@@ -486,7 +486,7 @@ export default function DisenoGraficoPage() {
                 </p>
                 <Link
                   href="/contacto"
-                  className="inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-[#2a2a2a] text-white px-4 py-2 rounded-full text-sm font-medium transition-colors"
+                  className="inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-gold-light text-white hover:text-[#1a1a1a] px-4 py-2 rounded-full text-sm font-medium transition-colors"
                 >
                   Hablemos <ArrowRight className="w-4 h-4" />
                 </Link>
@@ -546,7 +546,7 @@ export default function DisenoGraficoPage() {
                 </p>
                 <Link
                   href="/contacto"
-                  className="inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-[#2a2a2a] text-white px-4 py-2 rounded-full text-sm font-medium transition-colors"
+                  className="inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-gold-light text-white hover:text-[#1a1a1a] px-4 py-2 rounded-full text-sm font-medium transition-colors"
                 >
                   Hablemos <ArrowRight className="w-4 h-4" />
                 </Link>
@@ -705,7 +705,7 @@ export default function DisenoGraficoPage() {
           </p>
           <Link
             href="/contacto"
-            className="inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-[#2a2a2a] text-white px-6 py-3 rounded-full font-medium transition-colors"
+            className="inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-gold-light text-white hover:text-[#1a1a1a] px-6 py-3 rounded-full font-medium transition-colors"
           >
             Contáctanos <ArrowRight className="w-4 h-4" />
           </Link>

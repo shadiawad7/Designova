@@ -397,7 +397,7 @@ export default function GrabadoLaserPage() {
           </p>
           <Link
             href="/contacto"
-            className="inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-[#2a2a2a] text-white px-6 py-3 rounded-full font-medium transition-colors"
+            className="inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-gold-light text-white hover:text-[#1a1a1a] px-6 py-3 rounded-full font-medium transition-colors"
           >
             Empezamos <ArrowRight className="w-4 h-4" />
           </Link>
@@ -405,7 +405,8 @@ export default function GrabadoLaserPage() {
       </section>
 
       {/* Materials Section */}
-      <section className="py-16 px-4 bg-white">
+      {materialsEmpty ? null : (
+        <section className="py-16 px-4 bg-white">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-4 text-[#1a1a1a]">
             Materiales para grabado
@@ -480,9 +481,11 @@ export default function GrabadoLaserPage() {
           )}
         </div>
       </section>
+      )}
 
       {/* Products Section - Now redirects to Contact */}
-      <section className="py-16 px-4 bg-cream-dark">
+      {itemsEmpty ? null : (
+        <section className="py-16 px-4 bg-cream-dark">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-4 text-[#1a1a1a] underline decoration-gold underline-offset-8">
             Productos populares
@@ -578,6 +581,7 @@ export default function GrabadoLaserPage() {
           )}
         </div>
       </section>
+      )}
 
       {/* Process Section */}
       <section className="py-16 px-4 bg-white">
