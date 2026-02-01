@@ -12,6 +12,14 @@ interface Project {
   image?: string
 }
 
+interface PortafolioItem {
+  id: string
+  nombre: string | null
+  descripcion: string | null
+  precio: number | null
+  foto: string | null
+}
+
 const services = [
   {
     title: "Invitaciones para eventos",
@@ -41,18 +49,22 @@ const steps = [
   { number: "5", title: "Producimos y enviamos" },
 ]
 
-const defaultProjects: Project[] = [
-  { id: 1, title: "Diseño grafico" },
-  { id: 2, title: "Diseño grafico" },
-  { id: 3, title: "Diseño grafico" },
-  { id: 4, title: "Diseño grafico" },
-]
+const defaultProjects: Project[] = []
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 export default function HomePage() {
   const { data } = useSWR<{ projects: Project[] }>("/api/content/homepage", fetcher)
+  const { data: portafolioData } = useSWR<{ items: PortafolioItem[] }>(
+    "/api/portafolio",
+    fetcher
+  )
   const projects = data?.projects || defaultProjects
+  const selectedProjects = (portafolioData?.items || []).slice(0, 4).map((item, index) => ({
+    id: item.id || String(index),
+    title: item.nombre || "Proyecto",
+    image: item.foto || undefined,
+  }))
   const { data: leftData } = useSWR<{ items: { id: string; foto: string | null }[] }>(
     "/api/foto-izq",
     fetcher
@@ -277,7 +289,7 @@ export default function HomePage() {
                 </p>
                 <Link
                   href={service.href}
-                  className="inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-[#2a2a2a] text-white px-5 py-2.5 rounded-full text-sm font-medium transition-colors mt-auto mx-auto"
+                  className="inline-flex items-center gap-2 bg-gold hover:bg-gold-light text-[#1a1a1a] px-5 py-2.5 rounded-full text-sm font-medium transition-colors mt-auto mx-auto"
                 >
                   Mas información <ArrowRight className="w-4 h-4" />
                 </Link>
@@ -307,40 +319,42 @@ export default function HomePage() {
       </section>
 
       {/* Selected Projects */}
-      <section className="py-16 px-4 bg-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl md:text-4xl font-bold text-[#1a1a1a]">
-              Proyectos seleccionados
-            </h2>
-            <Link
-              href="/portafolio"
-              className="inline-flex items-center gap-2 bg-gold hover:bg-gold-light text-[#1a1a1a] px-5 py-2.5 rounded-full text-sm font-medium transition-colors"
-            >
-              Ver mas <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {projects.map((project) => (
-              <div key={project.id} className="group">
-                <div className="aspect-[4/3] bg-gray-200 rounded-lg mb-2 overflow-hidden relative">
-                  {project.image ? (
-                    <Image
-                      src={project.image || "/placeholder.svg"}
-                      alt={project.title}
-                      fill
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gray-300" />
-                  )}
+      {selectedProjects.length > 0 ? (
+        <section className="py-16 px-4 bg-white">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-3xl md:text-4xl font-bold text-[#1a1a1a]">
+                Proyectos seleccionados
+              </h2>
+              <Link
+                href="/portafolio"
+                className="inline-flex items-center gap-2 bg-gold hover:bg-gold-light text-[#1a1a1a] px-5 py-2.5 rounded-full text-sm font-medium transition-colors"
+              >
+                Ver mas <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {selectedProjects.map((project) => (
+                <div key={project.id} className="group">
+                  <div className="aspect-[4/3] bg-gray-200 rounded-lg mb-2 overflow-hidden relative">
+                    {project.image ? (
+                      <Image
+                        src={project.image || "/placeholder.svg"}
+                        alt={project.title}
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-300" />
+                    )}
+                  </div>
+                  <p className="text-sm text-[#1a1a1a]">{project.title}</p>
                 </div>
-                <p className="text-sm text-[#1a1a1a]">{project.title}</p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
       {/* CTA Section */}
       <section className="py-16 px-4 bg-gold">

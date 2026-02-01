@@ -14,7 +14,7 @@ const navItems = [
   { href: "/invitaciones", label: "Invitaciones para eventos" },
   { href: "/grabado-laser", label: "Grabado láser" },
   { href: "/diseno-grafico", label: "Diseño gráfico" },
-  { href: "/portafolio", label: "Portfolio" },
+  { href: "/portafolio", label: "Portafolio" },
   { href: "/sobre-nosotros", label: "Sobre nosotros" },
   { href: "/contacto", label: "Contacto" },
 ]
@@ -127,7 +127,7 @@ export function Header() {
                 className={`text-sm transition-colors whitespace-nowrap ${
                   isActive(item.href)
                     ? "text-[#1a1a1a] font-semibold border-b-2 border-[#1a1a1a] pb-1"
-                    : "text-[#1a1a1a]/90 hover:text-[#1a1a1a]"
+                    : "text-[#1a1a1a]/90 hover:text-[#1a1a1a] hover:border-b-2 hover:border-[#1a1a1a] pb-1"
                 }`}
               >
                 {item.label}
