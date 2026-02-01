@@ -80,7 +80,7 @@ export function Header() {
           <div className="flex items-center gap-2 shrink-0">
             <Link href="/" className="flex items-center gap-2">
               {localLogoUrl ? (
-                <div className="relative h-12 w-40">
+                <div className="relative h-100 w-75 flex items-center justify-center translate-y-[22.7px]">
                   <Image
                     src={localLogoUrl}
                     alt="Designova"

@@ -425,20 +425,16 @@ export default function GrabadoLaserPage() {
                   image: undefined,
                 })
               }}
-              className="inline-flex items-center gap-2 rounded-full bg-[#1a1a1a] px-6 py-3 text-sm font-medium text-white hover:bg-[#2a2a2a] transition-colors"
+              className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-[#1a1a1a] hover:bg-gold-light transition-colors"
             >
               <Plus className="h-4 w-4" />
               Crear material
             </button>
           </div>
-          {materialsEmpty ? (
-            <div className="rounded-2xl border border-dashed border-border bg-white p-10 text-center text-muted-foreground">
-              No hay materiales creados todavía. Usa “Crear material” para añadir el primero.
-            </div>
-          ) : null}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {content.materials.map((material, index) => (
-              <div key={material.id || `${material.name}-${index}`} className="text-center relative">
+          {materialsEmpty ? null : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              {content.materials.map((material, index) => (
+                <div key={material.id || `${material.name}-${index}`} className="text-center relative">
                 <button
                   type="button"
                   onClick={(event) => {
@@ -478,9 +474,10 @@ export default function GrabadoLaserPage() {
                 </div>
                 <h3 className="font-semibold text-[#1a1a1a] mb-2">{material.name}</h3>
                 <p className="text-muted-foreground text-sm">{material.description}</p>
-              </div>
-            ))}
-          </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -506,20 +503,16 @@ export default function GrabadoLaserPage() {
                   image: undefined,
                 })
               }}
-              className="inline-flex items-center gap-2 rounded-full bg-[#1a1a1a] px-6 py-3 text-sm font-medium text-white hover:bg-[#2a2a2a] transition-colors"
+              className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-[#1a1a1a] hover:bg-gold-light transition-colors"
             >
               <Plus className="h-4 w-4" />
               Crear carta
             </button>
           </div>
-          {itemsEmpty ? (
-            <div className="rounded-2xl border border-dashed border-border bg-white p-10 text-center text-muted-foreground">
-              No hay cartas creadas todavía. Usa “Crear carta” para añadir la primera.
-            </div>
-          ) : null}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {content.products.map((product) => (
-              <div key={product.id} className="group relative">
+          {itemsEmpty ? null : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              {content.products.map((product) => (
+                <div key={product.id} className="group relative">
                 <button
                   type="button"
                   onClick={(event) => {
@@ -579,9 +572,10 @@ export default function GrabadoLaserPage() {
                 >
                   Pedir ahora <ArrowRight className="w-4 h-4" />
                 </Link>
-              </div>
-            ))}
-          </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

@@ -225,7 +225,7 @@ export default function TiendaPage() {
                   image: undefined,
                 })
               }}
-              className="inline-flex items-center gap-2 rounded-full bg-[#1a1a1a] px-6 py-3 text-sm font-medium text-white hover:bg-[#2a2a2a] transition-colors"
+              className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-[#1a1a1a] hover:bg-gold-light transition-colors"
             >
               <Plus className="h-4 w-4" />
               Crear carta
