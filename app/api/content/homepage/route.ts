@@ -9,8 +9,17 @@ interface Project {
   image?: string
 }
 
+interface HeroAssets {
+  logo?: string
+  leftTop?: string
+  leftBottom?: string
+  rightTop?: string
+  rightBottom?: string
+}
+
 interface HomeContent {
   projects: Project[]
+  heroAssets?: HeroAssets
 }
 
 const defaultContent: HomeContent = {
@@ -20,6 +29,7 @@ const defaultContent: HomeContent = {
     { id: 3, title: "Diseño grafico" },
     { id: 4, title: "Diseño grafico" },
   ],
+  heroAssets: {},
 }
 
 export async function GET() {
@@ -47,6 +57,7 @@ export async function POST(request: NextRequest) {
     await put(HOMEPAGE_FILE, JSON.stringify(content, null, 2), {
       access: "public",
       contentType: "application/json",
+      allowOverwrite: true,
     })
 
     return NextResponse.json({ success: true, ...content })

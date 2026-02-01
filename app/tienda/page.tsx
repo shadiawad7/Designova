@@ -2,59 +2,66 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { useEffect, useRef, useState } from "react"
-import { ArrowRight, Edit3, Upload, X } from "lucide-react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { ArrowRight, Edit3, Plus, Trash2, Upload, X } from "lucide-react"
 import { useCart } from "@/context/cart-context"
 import useSWR from "swr"
 
 interface Product {
   id: string
   name: string
-  price: number
+  price: number | null
   category: string
   image?: string
   description?: string
-  mediaType?: "image" | "video"
 }
 
-const defaultProducts: Product[] = [
-  { id: "1", name: "Diseño grafico", price: 50, category: "Diseño", description: "Diseño personalizado para redes." },
-  { id: "2", name: "Diseño grafico", price: 50, category: "Diseño", description: "Propuesta creativa para tu marca." },
-  { id: "3", name: "Diseño grafico", price: 50, category: "Diseño", description: "Diseño a medida para impresos." },
-  { id: "4", name: "Diseño grafico", price: 50, category: "Diseño", description: "Composición visual para eventos." },
-  { id: "5", name: "Diseño grafico", price: 50, category: "Diseño", description: "Piezas gráficas para promociones." },
-  { id: "6", name: "Diseño grafico", price: 50, category: "Diseño", description: "Diseños exclusivos y adaptados." },
-  { id: "7", name: "Diseño grafico", price: 50, category: "Diseño", description: "Material gráfico para campañas." },
-  { id: "8", name: "Diseño grafico", price: 50, category: "Diseño", description: "Diseño profesional para negocios." },
-  { id: "9", name: "Diseño grafico", price: 50, category: "Diseño", description: "Arte final para impresión." },
-  { id: "10", name: "Diseño grafico", price: 50, category: "Diseño", description: "Diseño editorial y publicitario." },
-  { id: "11", name: "Diseño grafico", price: 50, category: "Diseño", description: "Piezas gráficas con identidad." },
-  { id: "12", name: "Diseño grafico", price: 50, category: "Diseño", description: "Soluciones gráficas creativas." },
-]
+const defaultProducts: Product[] = []
 
-const fetcher = (url: string) => fetch(url).then(res => res.json())
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
+
+const isVideoUrl = (url?: string) => {
+  if (!url) return false
+  const lower = url.toLowerCase()
+  return [".mp4", ".mov", ".webm", ".m4v", ".ogg"].some((ext) => lower.includes(ext))
+}
 
 export default function TiendaPage() {
   const { addItem } = useCart()
-  const { data } = useSWR<{ products: Product[] }>("/api/content/products", fetcher)
+  const { data } = useSWR<{ items: { id: string; foto: string | null; nombre: string | null; descripcion: string | null; precio: number | null }[] }>(
+    "/api/tienda",
+    fetcher
+  )
   const [products, setProducts] = useState<Product[]>(defaultProducts)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [isCreating, setIsCreating] = useState(false)
   const [draft, setDraft] = useState<Partial<Product>>({})
   const [saving, setSaving] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
-    if (data?.products) {
-      setProducts(data.products)
+    if (data?.items) {
+      const mapped = data.items.map((item) => ({
+        id: item.id,
+        name: item.nombre || "Sin nombre",
+        price: item.precio,
+        category: "Tienda",
+        image: item.foto || undefined,
+        description: item.descripcion || undefined,
+      }))
+      setProducts(mapped)
     }
-  }, [data?.products])
+  }, [data?.items])
+
+  const itemsEmpty = useMemo(() => products.length === 0, [products.length])
 
   const handleAddToCart = (product: Product) => {
     addItem({
       id: product.id,
       name: product.name,
-      price: product.price,
+      price: Number(product.price || 0),
       category: product.category,
       image: product.image,
     })
@@ -62,11 +69,12 @@ export default function TiendaPage() {
 
   const handleOpenEdit = (product: Product) => {
     setEditingProduct(product)
+    setIsCreating(false)
     setDraft({
+      name: product.name,
       description: product.description || "",
-      price: product.price,
+      price: product.price ?? 0,
       image: product.image,
-      mediaType: product.mediaType,
     })
   }
 
@@ -87,7 +95,6 @@ export default function TiendaPage() {
         setDraft((prev) => ({
           ...prev,
           image: url,
-          mediaType: file.type.startsWith("video/") ? "video" : "image",
         }))
       }
     } catch (error) {
@@ -97,33 +104,101 @@ export default function TiendaPage() {
   }
 
   const handleSaveEdit = async () => {
-    if (!editingProduct) return
+    if (!editingProduct && !isCreating) return
     setSaving(true)
-    const updatedProducts = products.map((product) =>
-      product.id === editingProduct.id
-        ? {
-            ...product,
-            description: String(draft.description || ""),
-            price: Number(draft.price || 0),
-            image: draft.image,
-            mediaType: draft.mediaType,
-          }
-        : product
-    )
 
     try {
-      await fetch("/api/content/products", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ products: updatedProducts }),
-      })
-      setProducts(updatedProducts)
-      setEditingProduct(null)
+      if (isCreating) {
+        const response = await fetch("/api/tienda", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nombre: String(draft.name || "Sin nombre"),
+            descripcion: String(draft.description || ""),
+            precio: Number(draft.price || 0),
+            foto: draft.image || null,
+          }),
+        })
+        const result = await response.json()
+        if (response.ok) {
+          const created = result.item
+          setProducts((prev) => [
+            ...prev,
+            {
+              id: created.id,
+              name: created.nombre || "Sin nombre",
+              price: created.precio,
+              category: "Tienda",
+              image: created.foto || undefined,
+              description: created.descripcion || undefined,
+            },
+          ])
+          setEditingProduct(null)
+          setIsCreating(false)
+        } else {
+          throw new Error(result.error || "Error al crear la carta")
+        }
+      } else if (editingProduct) {
+        const response = await fetch("/api/tienda", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: editingProduct.id,
+            nombre: String(draft.name || "Sin nombre"),
+            descripcion: String(draft.description || ""),
+            precio: Number(draft.price || 0),
+            foto: draft.image || null,
+          }),
+        })
+        const result = await response.json()
+        if (response.ok) {
+          const updated = result.item
+          setProducts((prev) =>
+            prev.map((product) =>
+              product.id === updated.id
+                ? {
+                    ...product,
+                    name: updated.nombre || "Sin nombre",
+                    description: updated.descripcion || "",
+                    price: updated.precio,
+                    image: updated.foto || undefined,
+                  }
+                : product
+            )
+          )
+          setEditingProduct(null)
+          setIsCreating(false)
+        } else {
+          throw new Error(result.error || "Error al guardar los cambios")
+        }
+      }
     } catch (error) {
       console.error("Save failed:", error)
       alert("Error al guardar los cambios")
     }
     setSaving(false)
+  }
+
+  const handleDelete = async (product: Product) => {
+    const confirmed = window.confirm("¿Eliminar esta carta?")
+    if (!confirmed) return
+    setDeletingId(product.id)
+    try {
+      const response = await fetch("/api/tienda", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: product.id }),
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        throw new Error(result.error || "Error al eliminar la carta")
+      }
+      setProducts((prev) => prev.filter((item) => item.id !== product.id))
+    } catch (error) {
+      console.error("Delete failed:", error)
+      alert("Error al eliminar la carta")
+    }
+    setDeletingId(null)
   }
 
   return (
@@ -137,12 +212,36 @@ export default function TiendaPage() {
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Diseños personalizados creados con detalle, pensados para momentos especiales.
           </p>
+          <div className="mt-6 flex justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                setEditingProduct(null)
+                setIsCreating(true)
+                setDraft({
+                  name: "",
+                  description: "",
+                  price: 0,
+                  image: undefined,
+                })
+              }}
+              className="inline-flex items-center gap-2 rounded-full bg-[#1a1a1a] px-6 py-3 text-sm font-medium text-white hover:bg-[#2a2a2a] transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Crear carta
+            </button>
+          </div>
         </div>
       </section>
 
       {/* Products Grid */}
       <section className="py-8 px-4">
         <div className="max-w-6xl mx-auto">
+          {itemsEmpty ? (
+            <div className="rounded-2xl border border-dashed border-border bg-white p-10 text-center text-muted-foreground">
+              No hay cartas creadas todavía. Usa “Crear carta” para añadir la primera.
+            </div>
+          ) : null}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {products.map((product) => (
               <div
@@ -161,10 +260,23 @@ export default function TiendaPage() {
                 >
                   <Edit3 className="h-4 w-4" />
                 </button>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    handleDelete(product)
+                  }}
+                  className="absolute top-3 left-3 z-10 rounded-full bg-white/90 p-2 text-red-500 shadow hover:bg-white"
+                  aria-label="Eliminar producto"
+                  disabled={deletingId === product.id}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
                 <Link href={`/producto/${product.id}`}>
                   <div className="aspect-square bg-gray-200 rounded-xl mb-4 overflow-hidden hover:opacity-90 transition-opacity relative">
                     {product.image ? (
-                      product.mediaType === "video" ? (
+                      isVideoUrl(product.image) ? (
                         <video
                           src={product.image}
                           className="h-full w-full object-cover"
@@ -186,10 +298,12 @@ export default function TiendaPage() {
                   </div>
                 </Link>
                 <h3 className="font-semibold text-[#1a1a1a] mb-1">{product.name}</h3>
-                {product.description ? (
-                  <p className="text-muted-foreground text-sm mb-2">{product.description}</p>
-                ) : null}
-                <p className="text-muted-foreground text-sm mb-4">Desde {product.price} €</p>
+                    {product.description ? (
+                      <p className="text-muted-foreground text-sm mb-2">{product.description}</p>
+                    ) : null}
+                <p className="text-muted-foreground text-sm mb-4">
+                  Desde {product.price ?? 0} €
+                </p>
                 <div className="mt-auto">
                   <button
                     onClick={() => handleAddToCart(product)}
@@ -222,14 +336,19 @@ export default function TiendaPage() {
         </div>
       </section>
 
-      {editingProduct ? (
+      {editingProduct || isCreating ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-[#1a1a1a]">Editar producto</h3>
+              <h3 className="text-lg font-semibold text-[#1a1a1a]">
+                {isCreating ? "Crear carta" : "Editar producto"}
+              </h3>
               <button
                 type="button"
-                onClick={() => setEditingProduct(null)}
+                onClick={() => {
+                  setEditingProduct(null)
+                  setIsCreating(false)
+                }}
                 className="rounded-full p-1 text-muted-foreground hover:text-[#1a1a1a]"
                 aria-label="Cerrar"
               >
@@ -240,7 +359,7 @@ export default function TiendaPage() {
               <div className="rounded-xl border border-border p-3">
                 <div className="mb-3 aspect-square overflow-hidden rounded-lg bg-gray-100 relative">
                   {draft.image ? (
-                    draft.mediaType === "video" ? (
+                    isVideoUrl(draft.image) ? (
                       <video
                         src={draft.image}
                         className="h-full w-full object-cover"
@@ -251,7 +370,7 @@ export default function TiendaPage() {
                     ) : (
                       <Image
                         src={draft.image}
-                        alt={editingProduct.name}
+                        alt={editingProduct?.name || String(draft.name || "Carta")}
                         fill
                         className="object-cover"
                       />
@@ -281,6 +400,15 @@ export default function TiendaPage() {
                 />
               </div>
               <div>
+                <label className="mb-1 block text-sm text-muted-foreground">Nombre</label>
+                <input
+                  type="text"
+                  value={String(draft.name || "")}
+                  onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value }))}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold"
+                />
+              </div>
+              <div>
                 <label className="mb-1 block text-sm text-muted-foreground">Descripción</label>
                 <textarea
                   value={String(draft.description || "")}
@@ -301,7 +429,10 @@ export default function TiendaPage() {
               <div className="flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setEditingProduct(null)}
+                  onClick={() => {
+                    setEditingProduct(null)
+                    setIsCreating(false)
+                  }}
                   className="rounded-full border border-border px-4 py-2 text-sm font-medium text-[#1a1a1a] hover:bg-cream-dark transition-colors"
                 >
                   Cancelar

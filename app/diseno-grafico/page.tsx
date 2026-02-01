@@ -4,73 +4,25 @@ import Link from "next/link"
 import Image from "next/image"
 import { useEffect, useRef, useState } from "react"
 import useSWR from "swr"
-import { ArrowRight, Edit3, FileCheck, RefreshCw, DollarSign, Truck, Upload, X } from "lucide-react"
+import { ArrowRight, Edit3, FileCheck, RefreshCw, DollarSign, Plus, Truck, Trash2, Upload, X } from "lucide-react"
 
 interface GraphicService {
   id: string
   title: string
   description: string
-  price: number
   image?: string
-  mediaType?: "image" | "video"
 }
 
 interface Project {
-  id: number
+  id: string
   title: string
-  category: string
   description: string
-  price: number
+  price: number | null
   image?: string
-  mediaType?: "image" | "video"
 }
 
-const defaultServices: GraphicService[] = [
-  {
-    id: "service-1",
-    title: "Diseño de publicaciones para redes sociales",
-    description: "Post instagram, Story instagram",
-    price: 45,
-  },
-  {
-    id: "service-2",
-    title: "Roll-ups y banners",
-    description: "Diseño de roll-ups, para ferias, eventos y puntos de venta",
-    price: 90,
-  },
-  {
-    id: "service-3",
-    title: "Vallas publicitarias y señalización",
-    description: "Diseño de carteles, pendones, vinilos, rótulos comerciales y publicidad exterior",
-    price: 150,
-  },
-  {
-    id: "service-4",
-    title: "Pegatinas y material publicitario",
-    description: "Diseño de pegatinas personalizadas, para productos y marca alternativa",
-    price: 60,
-  },
-  {
-    id: "service-5",
-    title: "Tarjetas de visita",
-    description: "Diseño de tarjetas de visita profesionales y modernas - tu primera impresión",
-    price: 40,
-  },
-  {
-    id: "service-6",
-    title: "Más productos de imprenta",
-    description: "Folletos, catálogos, flyers, menús y más",
-    price: 70,
-  },
-]
-
-const defaultProjects: Project[] = Array(12).fill(null).map((_, i) => ({
-  id: i + 1,
-  title: "Diseño grafico",
-  category: ["Invitaciones", "Grabado", "Diseño gráfico"][i % 3],
-  description: "Proyecto personalizado con detalles a medida.",
-  price: 50 + (i % 4) * 25,
-}))
+const defaultServices: GraphicService[] = []
+const defaultProjects: Project[] = []
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -105,10 +57,16 @@ const features = [
 ]
 
 export default function DisenoGraficoPage() {
-  const { data } = useSWR<{ services: GraphicService[] }>("/api/content/graphic-design", fetcher)
-  const { data: portfolioData } = useSWR<{ projects: Project[] }>("/api/content/portfolio", fetcher)
+  const { data } = useSWR<{ items: { id: string; foto: string | null; nombre: string | null; descripcion: string | null }[] }>(
+    "/api/nuestros-servicios",
+    fetcher
+  )
+  const { data: trabajosData } = useSWR<{ items: { id: string; foto: string | null; nombre: string | null; descripcion: string | null; precio: number | null }[] }>(
+    "/api/ejemplos-trabajos",
+    fetcher
+  )
   const [services, setServices] = useState<GraphicService[]>(defaultServices)
-  const [portfolioProjects, setPortfolioProjects] = useState<Project[]>(defaultProjects)
+  const [projects, setProjects] = useState<Project[]>(defaultProjects)
   const [editingService, setEditingService] = useState<GraphicService | null>(null)
   const [editingProject, setEditingProject] = useState<Project | null>(null)
   const [draft, setDraft] = useState<Partial<GraphicService>>({})
@@ -117,38 +75,58 @@ export default function DisenoGraficoPage() {
   const [projectSaving, setProjectSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [projectUploading, setProjectUploading] = useState(false)
+  const [isCreatingService, setIsCreatingService] = useState(false)
+  const [isCreatingProject, setIsCreatingProject] = useState(false)
+  const [deletingServiceId, setDeletingServiceId] = useState<string | null>(null)
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const projectFileInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
-    if (data?.services) {
-      setServices(data.services)
+    if (data?.items) {
+      setServices(
+        data.items.map((item) => ({
+          id: item.id,
+          title: item.nombre || "Sin nombre",
+          description: item.descripcion || "",
+          image: item.foto || undefined,
+        }))
+      )
     }
-  }, [data?.services])
+  }, [data?.items])
 
   useEffect(() => {
-    if (portfolioData?.projects) {
-      setPortfolioProjects(portfolioData.projects)
+    if (trabajosData?.items) {
+      setProjects(
+        trabajosData.items.map((item) => ({
+          id: item.id,
+          title: item.nombre || "Sin nombre",
+          description: item.descripcion || "",
+          price: item.precio,
+          image: item.foto || undefined,
+        }))
+      )
     }
-  }, [portfolioData?.projects])
+  }, [trabajosData?.items])
 
   const handleOpenServiceEdit = (service: GraphicService) => {
     setEditingService(service)
+    setIsCreatingService(false)
     setDraft({
+      title: service.title,
       description: service.description || "",
-      price: service.price,
       image: service.image,
-      mediaType: service.mediaType,
     })
   }
 
   const handleOpenProjectEdit = (project: Project) => {
     setEditingProject(project)
+    setIsCreatingProject(false)
     setProjectDraft({
+      title: project.title,
       description: project.description || "",
       price: project.price,
       image: project.image,
-      mediaType: project.mediaType,
     })
   }
 
@@ -157,7 +135,7 @@ export default function DisenoGraficoPage() {
     try {
       const formData = new FormData()
       formData.append("file", file)
-      formData.append("folder", "graphic-design/services")
+      formData.append("folder", "nuestros-servicios")
 
       const response = await fetch("/api/upload", {
         method: "POST",
@@ -169,7 +147,6 @@ export default function DisenoGraficoPage() {
         setDraft((prev) => ({
           ...prev,
           image: url,
-          mediaType: file.type.startsWith("video/") ? "video" : "image",
         }))
       }
     } catch (error) {
@@ -195,7 +172,6 @@ export default function DisenoGraficoPage() {
         setProjectDraft((prev) => ({
           ...prev,
           image: url,
-          mediaType: file.type.startsWith("video/") ? "video" : "image",
         }))
       }
     } catch (error) {
@@ -205,28 +181,69 @@ export default function DisenoGraficoPage() {
   }
 
   const handleSaveServiceEdit = async () => {
-    if (!editingService) return
+    if (!editingService && !isCreatingService) return
     setSaving(true)
-    const updatedServices = services.map((service) =>
-      service.id === editingService.id
-        ? {
-            ...service,
-            description: String(draft.description || ""),
-            price: Number(draft.price || 0),
-            image: draft.image,
-            mediaType: draft.mediaType,
-          }
-        : service
-    )
 
     try {
-      await fetch("/api/content/graphic-design", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ services: updatedServices }),
-      })
-      setServices(updatedServices)
-      setEditingService(null)
+      if (isCreatingService) {
+        const response = await fetch("/api/nuestros-servicios", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nombre: String(draft.title || "Sin nombre"),
+            descripcion: String(draft.description || ""),
+            foto: draft.image || null,
+          }),
+        })
+        const result = await response.json()
+        if (response.ok) {
+          const created = result.item
+          setServices((prev) => [
+            ...prev,
+            {
+              id: created.id,
+              title: created.nombre || "Sin nombre",
+              description: created.descripcion || "",
+              image: created.foto || undefined,
+            },
+          ])
+          setEditingService(null)
+          setIsCreatingService(false)
+        } else {
+          throw new Error(result.error || "Error al crear el servicio")
+        }
+      } else if (editingService) {
+        const response = await fetch("/api/nuestros-servicios", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: editingService.id,
+            nombre: String(draft.title || "Sin nombre"),
+            descripcion: String(draft.description || ""),
+            foto: draft.image || null,
+          }),
+        })
+        const result = await response.json()
+        if (response.ok) {
+          const updated = result.item
+          setServices((prev) =>
+            prev.map((service) =>
+              service.id === updated.id
+                ? {
+                    ...service,
+                    title: updated.nombre || "Sin nombre",
+                    description: updated.descripcion || "",
+                    image: updated.foto || undefined,
+                  }
+                : service
+            )
+          )
+          setEditingService(null)
+          setIsCreatingService(false)
+        } else {
+          throw new Error(result.error || "Error al guardar los cambios")
+        }
+      }
     } catch (error) {
       console.error("Save failed:", error)
       alert("Error al guardar los cambios")
@@ -235,33 +252,122 @@ export default function DisenoGraficoPage() {
   }
 
   const handleSaveProjectEdit = async () => {
-    if (!editingProject) return
+    if (!editingProject && !isCreatingProject) return
     setProjectSaving(true)
-    const updatedProjects = portfolioProjects.map((project) =>
-      project.id === editingProject.id
-        ? {
-            ...project,
-            description: String(projectDraft.description || ""),
-            price: Number(projectDraft.price || 0),
-            image: projectDraft.image,
-            mediaType: projectDraft.mediaType,
-          }
-        : project
-    )
 
     try {
-      await fetch("/api/content/portfolio", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projects: updatedProjects }),
-      })
-      setPortfolioProjects(updatedProjects)
-      setEditingProject(null)
+      if (isCreatingProject) {
+        const response = await fetch("/api/ejemplos-trabajos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nombre: String(projectDraft.title || "Sin nombre"),
+            descripcion: String(projectDraft.description || ""),
+            precio: Number(projectDraft.price || 0),
+            foto: projectDraft.image || null,
+          }),
+        })
+        const result = await response.json()
+        if (response.ok) {
+          const created = result.item
+          setProjects((prev) => [
+            ...prev,
+            {
+              id: created.id,
+              title: created.nombre || "Sin nombre",
+              description: created.descripcion || "",
+              price: created.precio,
+              image: created.foto || undefined,
+            },
+          ])
+          setEditingProject(null)
+          setIsCreatingProject(false)
+        } else {
+          throw new Error(result.error || "Error al crear el trabajo")
+        }
+      } else if (editingProject) {
+        const response = await fetch("/api/ejemplos-trabajos", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: editingProject.id,
+            nombre: String(projectDraft.title || "Sin nombre"),
+            descripcion: String(projectDraft.description || ""),
+            precio: Number(projectDraft.price || 0),
+            foto: projectDraft.image || null,
+          }),
+        })
+        const result = await response.json()
+        if (response.ok) {
+          const updated = result.item
+          setProjects((prev) =>
+            prev.map((project) =>
+              project.id === updated.id
+                ? {
+                    ...project,
+                    title: updated.nombre || "Sin nombre",
+                    description: updated.descripcion || "",
+                    price: updated.precio,
+                    image: updated.foto || undefined,
+                  }
+                : project
+            )
+          )
+          setEditingProject(null)
+          setIsCreatingProject(false)
+        } else {
+          throw new Error(result.error || "Error al guardar los cambios")
+        }
+      }
     } catch (error) {
       console.error("Save failed:", error)
       alert("Error al guardar los cambios")
     }
     setProjectSaving(false)
+  }
+
+  const handleDeleteService = async (service: GraphicService) => {
+    const confirmed = window.confirm("¿Eliminar este servicio?")
+    if (!confirmed) return
+    setDeletingServiceId(service.id)
+    try {
+      const response = await fetch("/api/nuestros-servicios", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: service.id }),
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        throw new Error(result.error || "Error al eliminar el servicio")
+      }
+      setServices((prev) => prev.filter((item) => item.id !== service.id))
+    } catch (error) {
+      console.error("Delete failed:", error)
+      alert("Error al eliminar el servicio")
+    }
+    setDeletingServiceId(null)
+  }
+
+  const handleDeleteProject = async (project: Project) => {
+    const confirmed = window.confirm("¿Eliminar este trabajo?")
+    if (!confirmed) return
+    setDeletingProjectId(project.id)
+    try {
+      const response = await fetch("/api/ejemplos-trabajos", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: project.id }),
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        throw new Error(result.error || "Error al eliminar el trabajo")
+      }
+      setProjects((prev) => prev.filter((item) => item.id !== project.id))
+    } catch (error) {
+      console.error("Delete failed:", error)
+      alert("Error al eliminar el trabajo")
+    }
+    setDeletingProjectId(null)
   }
 
   return (
@@ -303,6 +409,31 @@ export default function DisenoGraficoPage() {
             Amplia gama de servicios de diseño gráfico profesional para todas las necesidades de tu negocio y publicidad
           </p>
           
+          <div className="mb-8 flex justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                setEditingService(null)
+                setIsCreatingService(true)
+                setDraft({
+                  title: "",
+                  description: "",
+                  image: undefined,
+                })
+              }}
+              className="inline-flex items-center gap-2 rounded-full bg-[#1a1a1a] px-6 py-3 text-sm font-medium text-white hover:bg-[#2a2a2a] transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Crear servicio
+            </button>
+          </div>
+
+          {services.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border bg-white p-10 text-center text-muted-foreground">
+              No hay servicios creados todavía. Usa “Crear servicio” para añadir el primero.
+            </div>
+          ) : null}
+
           {/* First Row - 3 items */}
           <div className="grid md:grid-cols-3 gap-6 mb-6">
             {services.slice(0, 3).map((service) => (
@@ -322,24 +453,27 @@ export default function DisenoGraficoPage() {
                 >
                   <Edit3 className="h-4 w-4" />
                 </button>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    handleDeleteService(service)
+                  }}
+                  className="absolute left-4 top-4 z-10 rounded-full bg-white/90 p-2 text-red-500 shadow hover:bg-white"
+                  aria-label="Eliminar servicio"
+                  disabled={deletingServiceId === service.id}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
                 <div className="aspect-video bg-gray-200 rounded-lg mb-4 overflow-hidden relative">
                   {service.image ? (
-                    service.mediaType === "video" ? (
-                      <video
-                        src={service.image}
-                        className="h-full w-full object-cover"
-                        controls
-                        playsInline
-                        preload="metadata"
-                      />
-                    ) : (
-                      <Image
-                        src={service.image || "/placeholder.svg"}
-                        alt={service.title}
-                        fill
-                        className="object-cover"
-                      />
-                    )
+                    <Image
+                      src={service.image || "/placeholder.svg"}
+                      alt={service.title}
+                      fill
+                      className="object-cover"
+                    />
                   ) : (
                     <div className="w-full h-full bg-gray-300" />
                   )}
@@ -350,7 +484,6 @@ export default function DisenoGraficoPage() {
                 <p className="text-muted-foreground text-sm mb-4">
                   {service.description}
                 </p>
-                <p className="text-sm text-[#1a1a1a] mb-4">Desde {service.price} €</p>
                 <Link
                   href="/contacto"
                   className="inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-[#2a2a2a] text-white px-4 py-2 rounded-full text-sm font-medium transition-colors"
@@ -380,24 +513,27 @@ export default function DisenoGraficoPage() {
                 >
                   <Edit3 className="h-4 w-4" />
                 </button>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    handleDeleteService(service)
+                  }}
+                  className="absolute left-4 top-4 z-10 rounded-full bg-white/90 p-2 text-red-500 shadow hover:bg-white"
+                  aria-label="Eliminar servicio"
+                  disabled={deletingServiceId === service.id}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
                 <div className="aspect-video bg-gray-200 rounded-lg mb-4 overflow-hidden relative">
                   {service.image ? (
-                    service.mediaType === "video" ? (
-                      <video
-                        src={service.image}
-                        className="h-full w-full object-cover"
-                        controls
-                        playsInline
-                        preload="metadata"
-                      />
-                    ) : (
-                      <Image
-                        src={service.image || "/placeholder.svg"}
-                        alt={service.title}
-                        fill
-                        className="object-cover"
-                      />
-                    )
+                    <Image
+                      src={service.image || "/placeholder.svg"}
+                      alt={service.title}
+                      fill
+                      className="object-cover"
+                    />
                   ) : (
                     <div className="w-full h-full bg-gray-300" />
                   )}
@@ -408,7 +544,6 @@ export default function DisenoGraficoPage() {
                 <p className="text-muted-foreground text-sm mb-4">
                   {service.description}
                 </p>
-                <p className="text-sm text-[#1a1a1a] mb-4">Desde {service.price} €</p>
                 <Link
                   href="/contacto"
                   className="inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-[#2a2a2a] text-white px-4 py-2 rounded-full text-sm font-medium transition-colors"
@@ -430,8 +565,32 @@ export default function DisenoGraficoPage() {
           <p className="text-center text-muted-foreground mb-12">
             Una vista de algunos proyectos que diseñamos para nuestros clientes
           </p>
+          <div className="mb-8 flex justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                setEditingProject(null)
+                setIsCreatingProject(true)
+                setProjectDraft({
+                  title: "",
+                  description: "",
+                  price: 0,
+                  image: undefined,
+                })
+              }}
+              className="inline-flex items-center gap-2 rounded-full bg-[#1a1a1a] px-6 py-3 text-sm font-medium text-white hover:bg-[#2a2a2a] transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Crear trabajo
+            </button>
+          </div>
+          {projects.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border bg-white p-10 text-center text-muted-foreground">
+              No hay trabajos creados todavía. Usa “Crear trabajo” para añadir el primero.
+            </div>
+          ) : null}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {portfolioProjects.slice(0, 12).map((work) => (
+            {projects.slice(0, 12).map((work) => (
               <div key={work.id} className="group relative">
                 <button
                   type="button"
@@ -445,24 +604,27 @@ export default function DisenoGraficoPage() {
                 >
                   <Edit3 className="h-4 w-4" />
                 </button>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    handleDeleteProject(work)
+                  }}
+                  className="absolute left-2 top-2 z-10 rounded-full bg-white/90 p-2 text-red-500 shadow hover:bg-white"
+                  aria-label="Eliminar trabajo"
+                  disabled={deletingProjectId === work.id}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
                 <div className="aspect-square bg-gray-200 rounded-lg mb-2 overflow-hidden relative">
                   {work.image ? (
-                    work.mediaType === "video" ? (
-                      <video
-                        src={work.image}
-                        className="h-full w-full object-cover"
-                        controls
-                        playsInline
-                        preload="metadata"
-                      />
-                    ) : (
-                      <Image
-                        src={work.image || "/placeholder.svg"}
-                        alt={work.title}
-                        fill
-                        className="object-cover"
-                      />
-                    )
+                    <Image
+                      src={work.image || "/placeholder.svg"}
+                      alt={work.title}
+                      fill
+                      className="object-cover"
+                    />
                   ) : (
                     <div className="w-full h-full bg-gray-300" />
                   )}
@@ -550,14 +712,19 @@ export default function DisenoGraficoPage() {
         </div>
       </section>
 
-      {editingService ? (
+      {editingService || isCreatingService ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-[#1a1a1a]">Editar servicio</h3>
+              <h3 className="text-lg font-semibold text-[#1a1a1a]">
+                {isCreatingService ? "Crear servicio" : "Editar servicio"}
+              </h3>
               <button
                 type="button"
-                onClick={() => setEditingService(null)}
+                onClick={() => {
+                  setEditingService(null)
+                  setIsCreatingService(false)
+                }}
                 className="rounded-full p-1 text-muted-foreground hover:text-[#1a1a1a]"
                 aria-label="Cerrar"
               >
@@ -568,22 +735,12 @@ export default function DisenoGraficoPage() {
               <div className="rounded-xl border border-border p-3">
                 <div className="mb-3 aspect-video overflow-hidden rounded-lg bg-gray-100 relative">
                   {draft.image ? (
-                    draft.mediaType === "video" ? (
-                      <video
-                        src={draft.image}
-                        className="h-full w-full object-cover"
-                        controls
-                        playsInline
-                        preload="metadata"
-                      />
-                    ) : (
-                      <Image
-                        src={draft.image}
-                        alt={editingService.title}
-                        fill
-                        className="object-cover"
-                      />
-                    )
+                    <Image
+                      src={draft.image}
+                      alt={editingService?.title || String(draft.title || "Servicio")}
+                      fill
+                      className="object-cover"
+                    />
                   ) : (
                     <div className="h-full w-full bg-gray-200" />
                   )}
@@ -600,12 +757,21 @@ export default function DisenoGraficoPage() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*,video/*"
+                  accept="image/*"
                   className="hidden"
                   onChange={(event) => {
                     const file = event.target.files?.[0]
                     if (file) handleServiceMediaUpload(file)
                   }}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm text-muted-foreground">Nombre</label>
+                <input
+                  type="text"
+                  value={String(draft.title || "")}
+                  onChange={(event) => setDraft((prev) => ({ ...prev, title: event.target.value }))}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold"
                 />
               </div>
               <div>
@@ -617,19 +783,13 @@ export default function DisenoGraficoPage() {
                   className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold resize-none"
                 />
               </div>
-              <div>
-                <label className="mb-1 block text-sm text-muted-foreground">Precio (€)</label>
-                <input
-                  type="number"
-                  value={draft.price ?? 0}
-                  onChange={(event) => setDraft((prev) => ({ ...prev, price: Number(event.target.value) }))}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold"
-                />
-              </div>
               <div className="flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setEditingService(null)}
+                  onClick={() => {
+                    setEditingService(null)
+                    setIsCreatingService(false)
+                  }}
                   className="rounded-full border border-border px-4 py-2 text-sm font-medium text-[#1a1a1a] hover:bg-cream-dark transition-colors"
                 >
                   Cancelar
@@ -648,14 +808,19 @@ export default function DisenoGraficoPage() {
         </div>
       ) : null}
 
-      {editingProject ? (
+      {editingProject || isCreatingProject ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-[#1a1a1a]">Editar trabajo</h3>
+              <h3 className="text-lg font-semibold text-[#1a1a1a]">
+                {isCreatingProject ? "Crear trabajo" : "Editar trabajo"}
+              </h3>
               <button
                 type="button"
-                onClick={() => setEditingProject(null)}
+                onClick={() => {
+                  setEditingProject(null)
+                  setIsCreatingProject(false)
+                }}
                 className="rounded-full p-1 text-muted-foreground hover:text-[#1a1a1a]"
                 aria-label="Cerrar"
               >
@@ -666,22 +831,12 @@ export default function DisenoGraficoPage() {
               <div className="rounded-xl border border-border p-3">
                 <div className="mb-3 aspect-square overflow-hidden rounded-lg bg-gray-100 relative">
                   {projectDraft.image ? (
-                    projectDraft.mediaType === "video" ? (
-                      <video
-                        src={projectDraft.image}
-                        className="h-full w-full object-cover"
-                        controls
-                        playsInline
-                        preload="metadata"
-                      />
-                    ) : (
-                      <Image
-                        src={projectDraft.image}
-                        alt={editingProject.title}
-                        fill
-                        className="object-cover"
-                      />
-                    )
+                    <Image
+                      src={projectDraft.image}
+                      alt={editingProject?.title || String(projectDraft.title || "Trabajo")}
+                      fill
+                      className="object-cover"
+                    />
                   ) : (
                     <div className="h-full w-full bg-gray-200" />
                   )}
@@ -698,12 +853,21 @@ export default function DisenoGraficoPage() {
                 <input
                   ref={projectFileInputRef}
                   type="file"
-                  accept="image/*,video/*"
+                  accept="image/*"
                   className="hidden"
                   onChange={(event) => {
                     const file = event.target.files?.[0]
                     if (file) handleProjectMediaUpload(file)
                   }}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm text-muted-foreground">Nombre</label>
+                <input
+                  type="text"
+                  value={String(projectDraft.title || "")}
+                  onChange={(event) => setProjectDraft((prev) => ({ ...prev, title: event.target.value }))}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold"
                 />
               </div>
               <div>
@@ -727,7 +891,10 @@ export default function DisenoGraficoPage() {
               <div className="flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setEditingProject(null)}
+                  onClick={() => {
+                    setEditingProject(null)
+                    setIsCreatingProject(false)
+                  }}
                   className="rounded-full border border-border px-4 py-2 text-sm font-medium text-[#1a1a1a] hover:bg-cream-dark transition-colors"
                 >
                   Cancelar

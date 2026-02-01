@@ -1,53 +1,61 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import useSWR from "swr"
-import { Edit3, Upload, X } from "lucide-react"
+import { Edit3, Plus, Trash2, Upload, X } from "lucide-react"
 
 interface Project {
-  id: number
+  id: string
   title: string
-  category: string
   description: string
-  price: number
+  price: number | null
   image?: string
-  mediaType?: "image" | "video"
 }
 
-const defaultProjects: Project[] = Array(16).fill(null).map((_, i) => ({
-  id: i + 1,
-  title: "Diseño grafico",
-  category: ["Invitaciones", "Grabado", "Diseño gráfico"][i % 3],
-  description: "Proyecto personalizado con detalles a medida.",
-  price: 50 + (i % 4) * 25,
-}))
+const defaultProjects: Project[] = []
 
-const fetcher = (url: string) => fetch(url).then(res => res.json())
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 export default function PortafolioPage() {
-  const [selectedProject, setSelectedProject] = useState<number | null>(null)
-  const { data } = useSWR<{ projects: Project[] }>("/api/content/portfolio", fetcher)
+  const [selectedProject, setSelectedProject] = useState<string | null>(null)
+  const { data } = useSWR<{ items: { id: string; foto: string | null; nombre: string | null; descripcion: string | null; precio: number | null }[] }>(
+    "/api/portafolio",
+    fetcher
+  )
   const [projects, setProjects] = useState<Project[]>(defaultProjects)
   const [editingProject, setEditingProject] = useState<Project | null>(null)
+  const [isCreating, setIsCreating] = useState(false)
   const [draft, setDraft] = useState<Partial<Project>>({})
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
-    if (data?.projects) {
-      setProjects(data.projects)
+    if (data?.items) {
+      setProjects(
+        data.items.map((item) => ({
+          id: item.id,
+          title: item.nombre || "Sin nombre",
+          description: item.descripcion || "",
+          price: item.precio,
+          image: item.foto || undefined,
+        }))
+      )
     }
-  }, [data?.projects])
+  }, [data?.items])
+
+  const itemsEmpty = useMemo(() => projects.length === 0, [projects.length])
 
   const handleOpenEdit = (project: Project) => {
     setEditingProject(project)
+    setIsCreating(false)
     setDraft({
+      title: project.title,
       description: project.description || "",
-      price: project.price,
+      price: project.price ?? 0,
       image: project.image,
-      mediaType: project.mediaType,
     })
   }
 
@@ -68,7 +76,6 @@ export default function PortafolioPage() {
         setDraft((prev) => ({
           ...prev,
           image: url,
-          mediaType: file.type.startsWith("video/") ? "video" : "image",
         }))
       }
     } catch (error) {
@@ -78,33 +85,100 @@ export default function PortafolioPage() {
   }
 
   const handleSaveEdit = async () => {
-    if (!editingProject) return
+    if (!editingProject && !isCreating) return
     setSaving(true)
-    const updatedProjects = projects.map((project) =>
-      project.id === editingProject.id
-        ? {
-            ...project,
-            description: String(draft.description || ""),
-            price: Number(draft.price || 0),
-            image: draft.image,
-            mediaType: draft.mediaType,
-          }
-        : project
-    )
 
     try {
-      await fetch("/api/content/portfolio", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projects: updatedProjects }),
-      })
-      setProjects(updatedProjects)
-      setEditingProject(null)
+      if (isCreating) {
+        const response = await fetch("/api/portafolio", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nombre: String(draft.title || "Sin nombre"),
+            descripcion: String(draft.description || ""),
+            precio: Number(draft.price || 0),
+            foto: draft.image || null,
+          }),
+        })
+        const result = await response.json()
+        if (response.ok) {
+          const created = result.item
+          setProjects((prev) => [
+            ...prev,
+            {
+              id: created.id,
+              title: created.nombre || "Sin nombre",
+              description: created.descripcion || "",
+              price: created.precio,
+              image: created.foto || undefined,
+            },
+          ])
+          setEditingProject(null)
+          setIsCreating(false)
+        } else {
+          throw new Error(result.error || "Error al crear el proyecto")
+        }
+      } else if (editingProject) {
+        const response = await fetch("/api/portafolio", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: editingProject.id,
+            nombre: String(draft.title || "Sin nombre"),
+            descripcion: String(draft.description || ""),
+            precio: Number(draft.price || 0),
+            foto: draft.image || null,
+          }),
+        })
+        const result = await response.json()
+        if (response.ok) {
+          const updated = result.item
+          setProjects((prev) =>
+            prev.map((project) =>
+              project.id === updated.id
+                ? {
+                    ...project,
+                    title: updated.nombre || "Sin nombre",
+                    description: updated.descripcion || "",
+                    price: updated.precio,
+                    image: updated.foto || undefined,
+                  }
+                : project
+            )
+          )
+          setEditingProject(null)
+          setIsCreating(false)
+        } else {
+          throw new Error(result.error || "Error al guardar los cambios")
+        }
+      }
     } catch (error) {
       console.error("Save failed:", error)
       alert("Error al guardar los cambios")
     }
     setSaving(false)
+  }
+
+  const handleDelete = async (project: Project) => {
+    const confirmed = window.confirm("¿Eliminar este proyecto?")
+    if (!confirmed) return
+    setDeletingId(project.id)
+    try {
+      const response = await fetch("/api/portafolio", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: project.id }),
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        throw new Error(result.error || "Error al eliminar el proyecto")
+      }
+      setProjects((prev) => prev.filter((item) => item.id !== project.id))
+    } catch (error) {
+      console.error("Delete failed:", error)
+      alert("Error al eliminar el proyecto")
+    }
+    setDeletingId(null)
   }
 
   return (
@@ -118,12 +192,36 @@ export default function PortafolioPage() {
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Galería de proyectos que diseñamos y personalizamos para nuestros clientes especiales
           </p>
+          <div className="mt-6 flex justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                setEditingProject(null)
+                setIsCreating(true)
+                setDraft({
+                  title: "",
+                  description: "",
+                  price: 0,
+                  image: undefined,
+                })
+              }}
+              className="inline-flex items-center gap-2 rounded-full bg-[#1a1a1a] px-6 py-3 text-sm font-medium text-white hover:bg-[#2a2a2a] transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Crear proyecto
+            </button>
+          </div>
         </div>
       </section>
 
       {/* Portfolio Grid */}
       <section className="py-8 px-4 pb-20">
         <div className="max-w-6xl mx-auto">
+          {itemsEmpty ? (
+            <div className="rounded-2xl border border-dashed border-border bg-white p-10 text-center text-muted-foreground">
+              No hay proyectos creados todavía. Usa “Crear proyecto” para añadir el primero.
+            </div>
+          ) : null}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {projects.map((project) => (
               <div
@@ -151,33 +249,36 @@ export default function PortafolioPage() {
                       event.stopPropagation()
                       handleOpenEdit(project)
                     }}
-                    className="absolute right-6 top-6 z-10 rounded-full bg-white/90 p-2 text-[#1a1a1a] shadow hover:bg-white"
-                    aria-label="Editar proyecto"
-                  >
-                    <Edit3 className="h-4 w-4" />
-                  </button>
-                  <div className="aspect-square bg-gray-200 rounded-xl mb-3 overflow-hidden relative">
-                    {project.image ? (
-                      project.mediaType === "video" ? (
-                        <video
-                          src={project.image}
-                          className="h-full w-full object-cover"
-                          controls
-                          playsInline
-                          preload="metadata"
-                        />
-                      ) : (
-                        <Image
-                          src={project.image || "/placeholder.svg"}
-                          alt={project.title}
-                          fill
-                          className="object-cover"
-                        />
-                      )
-                    ) : (
-                      <div className="w-full h-full bg-gray-300" />
-                    )}
-                  </div>
+                  className="absolute right-6 top-6 z-10 rounded-full bg-white/90 p-2 text-[#1a1a1a] shadow hover:bg-white"
+                  aria-label="Editar proyecto"
+                >
+                  <Edit3 className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    handleDelete(project)
+                  }}
+                  className="absolute left-6 top-6 z-10 rounded-full bg-white/90 p-2 text-red-500 shadow hover:bg-white"
+                  aria-label="Eliminar proyecto"
+                  disabled={deletingId === project.id}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+                <div className="aspect-square bg-gray-200 rounded-xl mb-3 overflow-hidden relative">
+                  {project.image ? (
+                    <Image
+                      src={project.image || "/placeholder.svg"}
+                      alt={project.title}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-300" />
+                  )}
+                </div>
                   <p className="text-sm font-medium text-[#1a1a1a] text-center">{project.title}</p>
                   {project.description ? (
                     <p className="text-xs text-muted-foreground text-center mt-1">{project.description}</p>
@@ -192,14 +293,19 @@ export default function PortafolioPage() {
         </div>
       </section>
 
-      {editingProject ? (
+      {editingProject || isCreating ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-[#1a1a1a]">Editar proyecto</h3>
+              <h3 className="text-lg font-semibold text-[#1a1a1a]">
+                {isCreating ? "Crear proyecto" : "Editar proyecto"}
+              </h3>
               <button
                 type="button"
-                onClick={() => setEditingProject(null)}
+                onClick={() => {
+                  setEditingProject(null)
+                  setIsCreating(false)
+                }}
                 className="rounded-full p-1 text-muted-foreground hover:text-[#1a1a1a]"
                 aria-label="Cerrar"
               >
@@ -210,22 +316,12 @@ export default function PortafolioPage() {
               <div className="rounded-xl border border-border p-3">
                 <div className="mb-3 aspect-square overflow-hidden rounded-lg bg-gray-100 relative">
                   {draft.image ? (
-                    draft.mediaType === "video" ? (
-                      <video
-                        src={draft.image}
-                        className="h-full w-full object-cover"
-                        controls
-                        playsInline
-                        preload="metadata"
-                      />
-                    ) : (
-                      <Image
-                        src={draft.image}
-                        alt={editingProject.title}
-                        fill
-                        className="object-cover"
-                      />
-                    )
+                    <Image
+                      src={draft.image}
+                      alt={editingProject?.title || String(draft.title || "Proyecto")}
+                      fill
+                      className="object-cover"
+                    />
                   ) : (
                     <div className="h-full w-full bg-gray-200" />
                   )}
@@ -237,17 +333,26 @@ export default function PortafolioPage() {
                   disabled={uploading}
                 >
                   <Upload className="h-4 w-4" />
-                  {uploading ? "Subiendo..." : "Subir foto o video"}
+                  {uploading ? "Subiendo..." : "Subir foto"}
                 </button>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*,video/*"
+                  accept="image/*"
                   className="hidden"
                   onChange={(event) => {
                     const file = event.target.files?.[0]
                     if (file) handleMediaUpload(file)
                   }}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm text-muted-foreground">Nombre</label>
+                <input
+                  type="text"
+                  value={String(draft.title || "")}
+                  onChange={(event) => setDraft((prev) => ({ ...prev, title: event.target.value }))}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold"
                 />
               </div>
               <div>
@@ -271,7 +376,10 @@ export default function PortafolioPage() {
               <div className="flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setEditingProject(null)}
+                  onClick={() => {
+                    setEditingProject(null)
+                    setIsCreating(false)
+                  }}
                   className="rounded-full border border-border px-4 py-2 text-sm font-medium text-[#1a1a1a] hover:bg-cream-dark transition-colors"
                 >
                   Cancelar

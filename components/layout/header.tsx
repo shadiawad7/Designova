@@ -1,9 +1,12 @@
 "use client"
 
 import Link from "next/link"
-import { ShoppingCart, Menu, X } from "lucide-react"
+import Image from "next/image"
+import { usePathname } from "next/navigation"
+import useSWR, { useSWRConfig } from "swr"
+import { ShoppingCart, Menu, X, Edit3 } from "lucide-react"
 import { useCart } from "@/context/cart-context"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 const navItems = [
   { href: "/", label: "Inicio" },
@@ -19,18 +22,107 @@ const navItems = [
 export function Header() {
   const { totalItems } = useCart()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const pathname = usePathname()
+  const { mutate } = useSWRConfig()
+  const { data } = useSWR<{ heroAssets?: { logo?: string }; projects?: { id: number; title: string; image?: string }[] }>(
+    "/api/content/homepage",
+    (url) => fetch(url).then((res) => res.json())
+  )
+  const logoUrl = data?.heroAssets?.logo
+  const [localLogoUrl, setLocalLogoUrl] = useState<string | undefined>(undefined)
+  const [savingLogo, setSavingLogo] = useState(false)
+  const logoInputRef = useRef<HTMLInputElement | null>(null)
+
+  const isActive = (href: string) => {
+    if (href === "/") return pathname === "/"
+    return pathname === href || pathname.startsWith(`${href}/`)
+  }
+
+  useEffect(() => {
+    if (logoUrl) {
+      setLocalLogoUrl(logoUrl)
+    }
+  }, [logoUrl])
+
+  const handleLogoUpload = async (file: File) => {
+    setSavingLogo(true)
+    try {
+      const currentData =
+        data ||
+        (await fetch("/api/content/homepage").then((res) => res.json())) ||
+        {}
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("folder", "homepage/hero")
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (response.ok) {
+        const { url } = await response.json()
+        const nextHeroAssets = { ...(currentData.heroAssets || {}), logo: url }
+        await fetch("/api/content/homepage", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projects: currentData.projects || [], heroAssets: nextHeroAssets }),
+        })
+        setLocalLogoUrl(url)
+        mutate("/api/content/homepage")
+      }
+    } catch (error) {
+      console.error("Logo upload failed:", error)
+      alert("Error al subir el logo")
+    }
+    setSavingLogo(false)
+  }
 
   return (
-    <header className="bg-[#1a1a1a] text-white sticky top-0 z-50">
+    <header className="bg-gold text-[#1a1a1a] sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 shrink-0">
-            <div className="w-8 h-8 bg-gold rounded flex items-center justify-center">
-              <span className="text-[#1a1a1a] font-bold text-xs">D</span>
-            </div>
-            <span className="text-gold font-semibold text-sm tracking-wide">DESIGNOVA</span>
-          </Link>
+          <div className="flex items-center gap-2 shrink-0">
+            <Link href="/" className="flex items-center gap-2">
+              {localLogoUrl ? (
+                <div className="relative h-9 w-28">
+                  <Image
+                    src={localLogoUrl}
+                    alt="Designova"
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+              ) : (
+                <>
+                  <div className="w-8 h-8 bg-[#1a1a1a] rounded flex items-center justify-center">
+                    <span className="text-gold font-bold text-xs">D</span>
+                  </div>
+                  <span className="text-[#1a1a1a] font-semibold text-sm tracking-wide">DESIGNOVA</span>
+                </>
+              )}
+            </Link>
+            <button
+              type="button"
+              onClick={() => logoInputRef.current?.click()}
+              className="rounded-full bg-black/10 p-1 text-[#1a1a1a] hover:bg-black/20"
+              aria-label="Subir logo"
+              disabled={savingLogo}
+            >
+              <Edit3 className="h-4 w-4" />
+            </button>
+            <input
+              ref={logoInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0]
+                if (file) handleLogoUpload(file)
+              }}
+            />
+          </div>
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-6">
@@ -38,7 +130,11 @@ export function Header() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="text-white/90 hover:text-gold text-sm transition-colors whitespace-nowrap"
+                className={`text-sm transition-colors whitespace-nowrap ${
+                  isActive(item.href)
+                    ? "text-[#1a1a1a] font-semibold border-b-2 border-[#1a1a1a] pb-1"
+                    : "text-[#1a1a1a]/90 hover:text-[#1a1a1a]"
+                }`}
               >
                 {item.label}
               </Link>
@@ -48,15 +144,15 @@ export function Header() {
           {/* Cart & Mobile Menu */}
           <div className="flex items-center gap-4">
             <Link href="/carrito" className="relative">
-              <ShoppingCart className="w-5 h-5 text-white hover:text-gold transition-colors" />
+              <ShoppingCart className="w-5 h-5 text-[#1a1a1a] hover:text-[#1a1a1a] transition-colors" />
               {totalItems > 0 && (
-                <span className="absolute -top-2 -right-2 bg-gold text-[#1a1a1a] text-xs w-5 h-5 rounded-full flex items-center justify-center font-semibold">
+                <span className="absolute -top-2 -right-2 bg-[#1a1a1a] text-gold text-xs w-5 h-5 rounded-full flex items-center justify-center font-semibold">
                   {totalItems}
                 </span>
               )}
             </Link>
             <button
-              className="lg:hidden text-white"
+              className="lg:hidden text-[#1a1a1a]"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle menu"
             >
@@ -68,13 +164,17 @@ export function Header() {
 
       {/* Mobile Navigation */}
       {mobileMenuOpen && (
-        <nav className="lg:hidden bg-[#1a1a1a] border-t border-white/10 px-4 py-4">
+        <nav className="lg:hidden bg-gold border-t border-black/10 px-4 py-4">
           <div className="flex flex-col gap-3">
             {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="text-white/90 hover:text-gold text-sm py-2 transition-colors"
+                className={`text-sm py-2 transition-colors ${
+                  isActive(item.href)
+                    ? "text-[#1a1a1a] font-semibold"
+                    : "text-[#1a1a1a]/90 hover:text-[#1a1a1a]"
+                }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {item.label}

@@ -51,19 +51,39 @@ export default function ContactoPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
-    
-    // Simulate form submission
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    
-    setIsSubmitting(false)
-    setIsSubmitted(true)
-    setFormData({
-      nombre: "",
-      email: "",
-      telefono: "",
-      tipoConsulta: "",
-      mensaje: "",
-    })
+
+    try {
+      const response = await fetch("/api/contacto", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nombreCompleto: formData.nombre,
+          email: formData.email,
+          telefono: formData.telefono,
+          tipoConsulta: formData.tipoConsulta,
+          mensaje: formData.mensaje,
+        }),
+      })
+
+      const result = await response.json()
+      if (!response.ok) {
+        throw new Error(result.error || "Error al enviar el mensaje")
+      }
+
+      setIsSubmitted(true)
+      setFormData({
+        nombre: "",
+        email: "",
+        telefono: "",
+        tipoConsulta: "",
+        mensaje: "",
+      })
+    } catch (error) {
+      console.error("Submit failed:", error)
+      alert("No se pudo enviar el mensaje. Inténtalo de nuevo.")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
