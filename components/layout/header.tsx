@@ -3,7 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
-import useSWR, { useSWRConfig } from "swr"
+import useSWR from "swr"
 import { ShoppingCart, Menu, X, Edit3 } from "lucide-react"
 import { useCart } from "@/context/cart-context"
 import { useEffect, useRef, useState } from "react"
@@ -23,12 +23,12 @@ export function Header() {
   const { totalItems } = useCart()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const pathname = usePathname()
-  const { mutate } = useSWRConfig()
-  const { data } = useSWR<{ heroAssets?: { logo?: string }; projects?: { id: number; title: string; image?: string }[] }>(
-    "/api/content/homepage",
+  const { data } = useSWR<{ items: { id: string; foto: string | null }[] }>(
+    "/api/logo",
     (url) => fetch(url).then((res) => res.json())
   )
-  const logoUrl = data?.heroAssets?.logo
+  const logoUrl = data?.items?.[0]?.foto || undefined
+  const logoId = data?.items?.[0]?.id || null
   const [localLogoUrl, setLocalLogoUrl] = useState<string | undefined>(undefined)
   const [savingLogo, setSavingLogo] = useState(false)
   const logoInputRef = useRef<HTMLInputElement | null>(null)
@@ -47,10 +47,6 @@ export function Header() {
   const handleLogoUpload = async (file: File) => {
     setSavingLogo(true)
     try {
-      const currentData =
-        data ||
-        (await fetch("/api/content/homepage").then((res) => res.json())) ||
-        {}
       const formData = new FormData()
       formData.append("file", file)
       formData.append("folder", "homepage/hero")
@@ -62,14 +58,12 @@ export function Header() {
 
       if (response.ok) {
         const { url } = await response.json()
-        const nextHeroAssets = { ...(currentData.heroAssets || {}), logo: url }
-        await fetch("/api/content/homepage", {
-          method: "POST",
+        await fetch("/api/logo", {
+          method: logoId ? "PUT" : "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ projects: currentData.projects || [], heroAssets: nextHeroAssets }),
+          body: JSON.stringify(logoId ? { id: logoId, foto: url } : { foto: url }),
         })
         setLocalLogoUrl(url)
-        mutate("/api/content/homepage")
       }
     } catch (error) {
       console.error("Logo upload failed:", error)
@@ -86,7 +80,7 @@ export function Header() {
           <div className="flex items-center gap-2 shrink-0">
             <Link href="/" className="flex items-center gap-2">
               {localLogoUrl ? (
-                <div className="relative h-9 w-28">
+                <div className="relative h-12 w-40">
                   <Image
                     src={localLogoUrl}
                     alt="Designova"

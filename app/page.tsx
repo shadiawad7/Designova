@@ -3,19 +3,13 @@
 import Link from "next/link"
 import Image from "next/image"
 import { useEffect, useRef, useState } from "react"
-import { ArrowRight, Edit3, Upload } from "lucide-react"
+import { ArrowRight, Edit3 } from "lucide-react"
 import useSWR from "swr"
 
 interface Project {
   id: number
   title: string
   image?: string
-}
-
-interface HeroAssets {
-  logo?: string
-  left?: string
-  right?: string
 }
 
 const services = [
@@ -57,19 +51,46 @@ const defaultProjects: Project[] = [
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 export default function HomePage() {
-  const { data } = useSWR<{ projects: Project[]; heroAssets?: HeroAssets }>("/api/content/homepage", fetcher)
+  const { data } = useSWR<{ projects: Project[] }>("/api/content/homepage", fetcher)
   const projects = data?.projects || defaultProjects
-  const [heroAssets, setHeroAssets] = useState<HeroAssets>({})
+  const { data: leftData } = useSWR<{ items: { id: string; foto: string | null }[] }>(
+    "/api/foto-izq",
+    fetcher
+  )
+  const { data: rightData } = useSWR<{ items: { id: string; foto: string | null }[] }>(
+    "/api/foto-der",
+    fetcher
+  )
+  const [leftPhoto, setLeftPhoto] = useState<{ id: string | null; foto: string | null }>({
+    id: null,
+    foto: null,
+  })
+  const [rightPhoto, setRightPhoto] = useState<{ id: string | null; foto: string | null }>({
+    id: null,
+    foto: null,
+  })
   const [savingHero, setSavingHero] = useState(false)
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({})
 
   useEffect(() => {
-    if (data?.heroAssets) {
-      setHeroAssets(data.heroAssets)
+    if (leftData?.items?.length) {
+      setLeftPhoto({
+        id: leftData.items[0].id,
+        foto: leftData.items[0].foto || null,
+      })
     }
-  }, [data?.heroAssets])
+  }, [leftData?.items])
 
-  const handleHeroUpload = async (slot: keyof HeroAssets, file: File) => {
+  useEffect(() => {
+    if (rightData?.items?.length) {
+      setRightPhoto({
+        id: rightData.items[0].id,
+        foto: rightData.items[0].foto || null,
+      })
+    }
+  }, [rightData?.items])
+
+  const handleHeroUpload = async (side: "left" | "right", file: File) => {
     setSavingHero(true)
     try {
       const formData = new FormData()
@@ -83,13 +104,27 @@ export default function HomePage() {
 
       if (response.ok) {
         const { url } = await response.json()
-        const nextHeroAssets = { ...heroAssets, [slot]: url }
-        setHeroAssets(nextHeroAssets)
-        await fetch("/api/content/homepage", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ projects, heroAssets: nextHeroAssets }),
-        })
+        if (side === "left") {
+          const responseDb = await fetch("/api/foto-izq", {
+            method: leftPhoto.id ? "PUT" : "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(leftPhoto.id ? { id: leftPhoto.id, foto: url } : { foto: url }),
+          })
+          if (responseDb.ok) {
+            const result = await responseDb.json()
+            setLeftPhoto({ id: result.item.id, foto: result.item.foto })
+          }
+        } else {
+          const responseDb = await fetch("/api/foto-der", {
+            method: rightPhoto.id ? "PUT" : "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(rightPhoto.id ? { id: rightPhoto.id, foto: url } : { foto: url }),
+          })
+          if (responseDb.ok) {
+            const result = await responseDb.json()
+            setRightPhoto({ id: result.item.id, foto: result.item.foto })
+          }
+        }
       }
     } catch (error) {
       console.error("Upload failed:", error)
@@ -122,9 +157,9 @@ export default function HomePage() {
                     <Edit3 className="h-4 w-4" />
                   </button>
                   <div className="aspect-[3/5] rounded-xl bg-[#111] overflow-hidden relative">
-                    {heroAssets.left ? (
+                    {leftPhoto.foto ? (
                       <Image
-                        src={heroAssets.left}
+                        src={leftPhoto.foto}
                         alt="Imagen izquierda"
                         fill
                         className="object-cover"
@@ -191,9 +226,9 @@ export default function HomePage() {
                     <Edit3 className="h-4 w-4" />
                   </button>
                   <div className="aspect-[3/5] rounded-xl bg-[#111] overflow-hidden relative">
-                    {heroAssets.right ? (
+                    {rightPhoto.foto ? (
                       <Image
-                        src={heroAssets.right}
+                        src={rightPhoto.foto}
                         alt="Imagen derecha"
                         fill
                         className="object-cover"
@@ -229,7 +264,7 @@ export default function HomePage() {
             {services.map((service) => (
               <div
                 key={service.title}
-                className="bg-cream-dark rounded-2xl p-6 text-center"
+                className="bg-cream-dark rounded-2xl p-6 text-center flex flex-col h-full"
               >
                 <div className="w-16 h-16 bg-cream rounded-full mx-auto mb-4 flex items-center justify-center">
                   <div className="w-8 h-8 bg-gold/20 rounded-full" />
@@ -242,7 +277,7 @@ export default function HomePage() {
                 </p>
                 <Link
                   href={service.href}
-                  className="inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-[#2a2a2a] text-white px-5 py-2.5 rounded-full text-sm font-medium transition-colors"
+                  className="inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-[#2a2a2a] text-white px-5 py-2.5 rounded-full text-sm font-medium transition-colors mt-auto mx-auto"
                 >
                   Mas información <ArrowRight className="w-4 h-4" />
                 </Link>
